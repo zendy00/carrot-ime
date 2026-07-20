@@ -41,7 +41,11 @@ public static class Decider
         var state = ResolveState(s.KeyboardLangId, s.ConversionMode);
         var label = Label(state);
 
-        // Ticket 01: 캐럿을 얻었을 때만 표시. (편집 포커스 한정은 Ticket 03, 고정 폴백은 Ticket 04)
+        // Ticket 03: 편집 가능한 텍스트 포커스가 있을 때만 표시.
+        if (!s.EditableFocus)
+            return IndicatorView.Hidden;
+
+        // 캐럿을 얻었을 때만 캐럿 옆에 표시. (Ticket 04: 편집 포커스 O + 캐럿 X → 고정 위치 폴백)
         if (s.Caret is not Rectangle caret)
             return IndicatorView.Hidden;
 

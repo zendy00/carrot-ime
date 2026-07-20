@@ -76,4 +76,22 @@ internal static class Win32
     internal static extern bool SetLayeredWindowAttributes(IntPtr hwnd, uint crKey, byte bAlpha, uint dwFlags);
 
     internal const uint LWA_ALPHA = 0x2;
+
+    // WinEvent 후킹: 포그라운드/포커스 변화에 반응 (Ticket 03, 상시 폴링 대체)
+    internal delegate void WinEventProc(
+        IntPtr hWinEventHook, uint eventType, IntPtr hwnd,
+        int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
+
+    [DllImport("user32.dll")]
+    internal static extern IntPtr SetWinEventHook(
+        uint eventMin, uint eventMax, IntPtr hmodWinEventProc,
+        WinEventProc lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool UnhookWinEvent(IntPtr hWinEventHook);
+
+    internal const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
+    internal const uint EVENT_OBJECT_FOCUS = 0x8005;
+    internal const uint WINEVENT_OUTOFCONTEXT = 0x0000;
 }
