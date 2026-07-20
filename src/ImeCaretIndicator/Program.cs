@@ -8,6 +8,12 @@ namespace ImeCaretIndicator;
 
 internal static class Program
 {
+    // 폴백 체인: 네이티브(GetGUIThreadInfo) → UIA → MSAA. (Ticket 02)
+    private static readonly CaretResolver Caret = new(
+        GuiThreadInfoCaret.TryGet,
+        UiaCaret.TryGet,
+        MsaaCaret.TryGet);
+
     [STAThread]
     private static void Main()
     {
@@ -49,7 +55,7 @@ internal static class Program
 
         uint threadId = Win32.GetWindowThreadProcessId(foreground, out _);
         var (langId, conversionMode) = ImeStateReader.Read(foreground, threadId);
-        Rectangle? caret = CaretLocator.TryGetCaretRect(threadId);
+        Rectangle? caret = Caret.Resolve(threadId);
         Rectangle screen = Screen.FromPoint(caret?.Location ?? Cursor.Position).Bounds;
 
         return new InputSnapshot(caret, screen, indicatorSize, langId, conversionMode);

@@ -3,13 +3,10 @@ using System.Runtime.InteropServices;
 
 namespace ImeCaretIndicator.Adapters;
 
-/// <summary>
-/// 캐럿 위치를 화면 좌표 사각형으로 얻는다. Ticket 01은 GetGUIThreadInfo만 사용.
-/// (UIA·MSAA 다단 폴백은 Ticket 02에서 추가)
-/// </summary>
-internal static class CaretLocator
+/// <summary>네이티브 캐럿(GetGUIThreadInfo). 폴백 체인의 첫 번째 소스.</summary>
+internal static class GuiThreadInfoCaret
 {
-    public static Rectangle? TryGetCaretRect(uint threadId)
+    public static Rectangle? TryGet(uint threadId)
     {
         var gti = new Win32.GUITHREADINFO { cbSize = Marshal.SizeOf<Win32.GUITHREADINFO>() };
         if (!Win32.GetGUIThreadInfo(threadId, ref gti) || gti.hwndCaret == IntPtr.Zero)
