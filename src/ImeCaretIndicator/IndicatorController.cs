@@ -151,8 +151,8 @@ internal sealed class IndicatorController : IDisposable
         if (_pendingFocusReset)
         {
             _pendingFocusReset = false;
-            _lastCaret = caret;         // 기준선만 갱신, 활동 아님
-            _lastActivityTick = null;   // 유휴로 간주 → 표시
+            _lastCaret = caret;          // 기준선만 갱신
+            _lastActivityTick = now;     // 포커스 시점부터 유휴 카운트 시작(1분 지나야 표시)
         }
         else if (caret is Rectangle c && _lastCaret is Rectangle last)
         {

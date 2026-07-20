@@ -17,3 +17,8 @@
 - **유휴 CPU 측정 조건:** "유휴 ~0"은 **편집 포커스가 없을 때** 성립(타이머 정지). 텍스트 필드에 포커스가 있는 동안은 키 입력이 없어도 120ms 타이머가 계속 돎(~8회/초, 캐럿 추종·한/영 감지용). 스펙이 허용한 "가벼운 폴링 보완"이나, **포커스된 유휴 메모장에서 CPU 측정**을 수동 체크에 포함.
 - **전역 focus 훅 부하:** `EVENT_OBJECT_FOCUS`를 전역(idProcess 0)으로 후킹 → 모든 앱의 포커스 변화마다 `Update()`. 멈춘 앱 대비 IME 질의는 `SendMessageTimeout`으로 완화함. 메뉴 조작 등 포커스 폭주 시 CPU/지연은 실기 확인 대상.
 - **적용된 수정:** SendMessage→SendMessageTimeout(ABORTIFHUNG), FocusInspector에서 ComboBox 제외, `_imeTimer`→`_inputStateTimer` 리네임.
+
+### 후속 개정 (사용자 피드백)
+
+- **버튼 포커스 오표시 버그 수정:** 브라우저가 문서 조상에 TextPattern을 노출해 버튼·링크 포커스도 편집으로 오판(→우상단 폴백 표시)되던 문제. `FocusInspector`를 `IsTextPatternAvailable` 대신 **ControlType(Edit/Document)+읽기전용 제외**로 엄격화. 이제 웹 버튼 포커스에선 표시 안 됨.
+- **유휴 임계 5초→약 1분, 포커스 즉시표시 제거:** 포커스만으로는 뜨지 않고(포커스 시점부터 유휴 카운트 시작), 1분 이상 키 입력이 없어야 표시. 입력 시작 시 숨김. `IdleReappearMs=60_000`, `TrackActivity` 포커스 리셋을 유휴가 아니라 활동시작으로 변경.

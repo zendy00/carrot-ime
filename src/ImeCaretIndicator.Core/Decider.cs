@@ -23,8 +23,8 @@ public static class Decider
     // 고정 폴백 위치(활성 창 우상단)의 안쪽 여백.
     private const int FallbackMargin = 6;
 
-    // 입력 중에는 숨기고, 이만큼 유휴하면 다시 표시(ms).
-    private const long IdleReappearMs = 5_000;
+    // 입력 중에는 숨기고, 이만큼(약 1분) 유휴하면 다시 표시(ms).
+    private const long IdleReappearMs = 60_000;
 
     /// <summary>키보드 레이아웃 언어 ID와 IME 조합 모드로 입력 상태를 판별한다.</summary>
     public static InputState ResolveState(ushort keyboardLangId, uint conversionMode)

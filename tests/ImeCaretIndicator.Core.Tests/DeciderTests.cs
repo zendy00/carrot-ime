@@ -16,7 +16,7 @@ public class DeciderTests
 
     private static InputSnapshot Snap(
         Rectangle? caret, ushort lang = En, uint mode = Alpha, bool editable = true,
-        Rectangle? activeWindow = null, long millisSinceActivity = 10_000)
+        Rectangle? activeWindow = null, long millisSinceActivity = 120_000)
         => new(
             EditableFocus: editable,
             Caret: caret,
@@ -148,10 +148,19 @@ public class DeciderTests
     }
 
     [Fact]
-    public void Indicator_reappears_after_five_seconds_idle()
+    public void Still_hidden_before_one_minute_idle()
+    {
+        // 30초 유휴는 아직 1분 미만 → 숨김
+        var view = Decider.Decide(
+            Snap(new Rectangle(100, 200, 2, 16), Ko, Native, millisSinceActivity: 30_000));
+        Assert.False(view.Visible);
+    }
+
+    [Fact]
+    public void Indicator_reappears_after_one_minute_idle()
     {
         var view = Decider.Decide(
-            Snap(new Rectangle(100, 200, 2, 16), Ko, Native, millisSinceActivity: 5_000));
+            Snap(new Rectangle(100, 200, 2, 16), Ko, Native, millisSinceActivity: 60_000));
         Assert.True(view.Visible);
         Assert.Equal("한", view.Label);
     }
