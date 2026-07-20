@@ -26,32 +26,32 @@ internal static class Program
         Application.Run();
     }
 
+    // 셸: OS에서 스냅샷을 읽고(ReadSnapshot) → seam(Decide)이 결정 → 그 결정을 적용만 한다.
+    // 표시/숨김 결정은 전부 Decider 안에 있다.
     private static void Tick(OverlayForm overlay)
     {
-        IntPtr foreground = Win32.GetForegroundWindow();
-        if (foreground == IntPtr.Zero)
-        {
-            overlay.HideIndicator();
-            return;
-        }
-
-        uint threadId = Win32.GetWindowThreadProcessId(foreground, out _);
-        var (langId, conversionMode) = ImeStateReader.Read(foreground, threadId);
-        Rectangle? caret = CaretLocator.TryGetCaretRect(threadId);
-
-        Rectangle screen = Screen.FromPoint(caret?.Location ?? Cursor.Position).Bounds;
-
-        var snapshot = new InputSnapshot(
-            Caret: caret,
-            ScreenBounds: screen,
-            IndicatorSize: overlay.PreferredIndicatorSize,
-            KeyboardLangId: langId,
-            ConversionMode: conversionMode);
-
+        InputSnapshot snapshot = ReadSnapshot(overlay.PreferredIndicatorSize);
         IndicatorView view = Decider.Decide(snapshot);
+
         if (view.Visible)
             overlay.Render(view.Label, view.Position);
         else
             overlay.HideIndicator();
+    }
+
+    // OS 어댑터를 모아 순수 스냅샷을 만든다. 포그라운드 창이 없으면 캐럿 없는 스냅샷을 낸다
+    // (그 경우의 '숨김'은 Decide가 판단).
+    private static InputSnapshot ReadSnapshot(Size indicatorSize)
+    {
+        IntPtr foreground = Win32.GetForegroundWindow();
+        if (foreground == IntPtr.Zero)
+            return new InputSnapshot(null, Rectangle.Empty, indicatorSize, 0, 0);
+
+        uint threadId = Win32.GetWindowThreadProcessId(foreground, out _);
+        var (langId, conversionMode) = ImeStateReader.Read(foreground, threadId);
+        Rectangle? caret = CaretLocator.TryGetCaretRect(threadId);
+        Rectangle screen = Screen.FromPoint(caret?.Location ?? Cursor.Position).Bounds;
+
+        return new InputSnapshot(caret, screen, indicatorSize, langId, conversionMode);
     }
 }
