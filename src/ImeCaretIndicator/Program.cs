@@ -16,12 +16,13 @@ internal static class Program
         AppSettings settings = AppSettings.Load();
 
         using var controller = new IndicatorController();
+        controller.IdleSeconds = settings.IdleSeconds;
         controller.Enabled = settings.Enabled;
-        controller.Start();
 
         using var tray = new TrayIcon(
             enabled: settings.Enabled,
             autoStart: AutoStart.IsEnabled(),
+            idleSeconds: settings.IdleSeconds,
             onEnabledChanged: enabled =>
             {
                 controller.Enabled = enabled;
@@ -36,7 +37,16 @@ internal static class Program
                 settings.Save();
                 return applied;
             },
+            onIdleSecondsChanged: seconds =>
+            {
+                controller.IdleSeconds = seconds;
+                settings.IdleSeconds = seconds;
+                settings.Save();
+            },
             onExit: Application.Exit);
+
+        controller.StateChanged = tray.SetGlyph; // 트레이 아이콘에 현재 입력 상태 글자 표시
+        controller.Start();
 
         Application.Run();
     }

@@ -136,7 +136,7 @@ public class DeciderTests
         Assert.False(view.Visible);
     }
 
-    // ---- Debounce: 입력 중엔 숨기고, 5초 이상 유휴면 다시 표시 ----
+    // ---- Debounce: 입력 중엔 숨기고, 약 20초 이상 유휴면 다시 표시 ----
 
     [Fact]
     public void Recent_input_activity_hides_indicator_while_typing()
@@ -148,20 +148,32 @@ public class DeciderTests
     }
 
     [Fact]
-    public void Still_hidden_before_one_minute_idle()
+    public void Still_hidden_before_idle_threshold()
     {
-        // 30초 유휴는 아직 1분 미만 → 숨김
+        // 10초 유휴는 아직 20초 미만 → 숨김
         var view = Decider.Decide(
-            Snap(new Rectangle(100, 200, 2, 16), Ko, Native, millisSinceActivity: 30_000));
+            Snap(new Rectangle(100, 200, 2, 16), Ko, Native, millisSinceActivity: 10_000));
         Assert.False(view.Visible);
     }
 
     [Fact]
-    public void Indicator_reappears_after_one_minute_idle()
+    public void Indicator_reappears_after_idle_threshold()
     {
+        // 20초 유휴 → 표시(기본 임계값 20초)
         var view = Decider.Decide(
-            Snap(new Rectangle(100, 200, 2, 16), Ko, Native, millisSinceActivity: 60_000));
+            Snap(new Rectangle(100, 200, 2, 16), Ko, Native, millisSinceActivity: 20_000));
         Assert.True(view.Visible);
         Assert.Equal("한", view.Label);
+    }
+
+    [Fact]
+    public void Custom_idle_threshold_is_respected()
+    {
+        var snap = Snap(new Rectangle(100, 200, 2, 16), Ko, Native, millisSinceActivity: 15_000);
+
+        // 기본(20초) 임계에선 15초 유휴는 아직 숨김
+        Assert.False(Decider.Decide(snap).Visible);
+        // 사용자가 10초로 설정하면 15초 유휴는 표시
+        Assert.True(Decider.Decide(snap, idleReappearMs: 10_000).Visible);
     }
 }

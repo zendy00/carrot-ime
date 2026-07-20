@@ -23,8 +23,9 @@ public static class Decider
     // 고정 폴백 위치(활성 창 우상단)의 안쪽 여백.
     private const int FallbackMargin = 6;
 
-    // 입력 중에는 숨기고, 이만큼(약 1분) 유휴하면 다시 표시(ms).
-    private const long IdleReappearMs = 60_000;
+    // 입력 중에는 숨기고, 이만큼 유휴하면 다시 표시(ms). 사용자가 설정으로 바꿀 수 있고,
+    // 지정이 없으면 이 기본값(약 20초)을 쓴다.
+    public const long DefaultIdleReappearMs = 20_000;
 
     /// <summary>키보드 레이아웃 언어 ID와 IME 조합 모드로 입력 상태를 판별한다.</summary>
     public static InputState ResolveState(ushort keyboardLangId, uint conversionMode)
@@ -61,7 +62,8 @@ public static class Decider
     };
 
     /// <summary>스냅샷 하나를 받아 인디케이터를 어떻게 그릴지 결정한다.</summary>
-    public static IndicatorView Decide(InputSnapshot s)
+    /// <param name="idleReappearMs">입력 후 다시 표시되기까지의 유휴 시간(ms). 사용자 설정값.</param>
+    public static IndicatorView Decide(InputSnapshot s, long idleReappearMs = DefaultIdleReappearMs)
     {
         var state = ResolveState(s.KeyboardLangId, s.ConversionMode);
         var label = Label(state, s.KeyboardLangId);
@@ -70,8 +72,8 @@ public static class Decider
         if (!s.EditableFocus)
             return IndicatorView.Hidden;
 
-        // 입력 중(최근 캐럿 이동)에는 방해하지 않도록 숨기고, 5초 이상 유휴하면 다시 표시.
-        if (s.MillisSinceInputActivity < IdleReappearMs)
+        // 입력 중(최근 캐럿 이동)에는 방해하지 않도록 숨기고, 설정된 유휴 시간이 지나면 다시 표시.
+        if (s.MillisSinceInputActivity < idleReappearMs)
             return IndicatorView.Hidden;
 
         // 캐럿을 얻으면 캐럿 오른쪽에, 못 얻으면(크롬 등) 활성 창 우상단에 폴백(Ticket 04).

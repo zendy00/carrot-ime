@@ -13,6 +13,9 @@ internal sealed class AppSettings
     // 자동 시작의 실제 진실은 작업 스케줄러 등록 여부(AutoStart.IsEnabled). 여기엔 선호만 보관.
     public bool AutoStart { get; set; }
 
+    // 입력 후 인디케이터가 다시 표시되기까지의 유휴 시간(초).
+    public int IdleSeconds { get; set; } = 20;
+
     private static string Dir => System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ImeCaretIndicator");
 
@@ -35,6 +38,10 @@ internal sealed class AppSettings
                 {
                     case "Enabled": settings.Enabled = kv[1].Trim() == "1"; break;
                     case "AutoStart": settings.AutoStart = kv[1].Trim() == "1"; break;
+                    case "IdleSeconds":
+                        if (int.TryParse(kv[1].Trim(), out int sec) && sec > 0)
+                            settings.IdleSeconds = sec;
+                        break;
                 }
             }
         }
@@ -50,7 +57,8 @@ internal sealed class AppSettings
         try
         {
             Directory.CreateDirectory(Dir);
-            File.WriteAllText(FilePath, $"Enabled={(Enabled ? 1 : 0)}\nAutoStart={(AutoStart ? 1 : 0)}\n");
+            File.WriteAllText(FilePath,
+                $"Enabled={(Enabled ? 1 : 0)}\nAutoStart={(AutoStart ? 1 : 0)}\nIdleSeconds={IdleSeconds}\n");
         }
         catch
         {

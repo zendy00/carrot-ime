@@ -26,6 +26,7 @@ internal sealed class IndicatorController : IDisposable
     private IntPtr _focusHook;
 
     private bool _enabled = true;
+    private long _idleReappearMs = Decider.DefaultIdleReappearMs;
 
     /// <summary>일시정지 토글. 앱 수명주기(입력 사실이 아님)라 셸에서 게이트한다.</summary>
     public bool Enabled
@@ -34,10 +35,19 @@ internal sealed class IndicatorController : IDisposable
         set { _enabled = value; Update(); }
     }
 
+    /// <summary>입력 후 다시 표시되기까지의 유휴 시간(초). 사용자 설정.</summary>
+    public int IdleSeconds
+    {
+        set { _idleReappearMs = value * 1000L; Update(); }
+    }
+
+    /// <summary>현재 입력 상태 글자(한/영/あ 등)를 알린다. 트레이 아이콘 갱신용.</summary>
+    public Action<string>? StateChanged { get; set; }
+
     // 입력 활동(캐럿 이동) 추적 — debounce 표시용.
     private Rectangle? _lastCaret;
     private long? _lastActivityTick; // null = 활동 기록 없음(유휴로 간주). TickCount64==0 충돌 방지.
-    private bool _pendingFocusReset; // 포커스 변경은 활동으로 치지 않음(새 필드에선 바로 표시)
+    private bool _pendingFocusReset; // 포커스 시점부터 유휴 카운트 시작(포커스만으론 표시 안 함)
 
     public IndicatorController()
     {
@@ -61,7 +71,7 @@ internal sealed class IndicatorController : IDisposable
     private void OnWinEvent(
         IntPtr hook, uint ev, IntPtr hwnd, int idObject, int idChild, uint thread, uint time)
     {
-        _pendingFocusReset = true; // 포커스/전면 전환 → 활동 리셋(새 필드에선 즉시 표시)
+        _pendingFocusReset = true; // 포커스/전면 전환 → 유휴 카운트 재시작(포커스만으론 표시 안 함)
         Update();
     }
 
@@ -77,14 +87,22 @@ internal sealed class IndicatorController : IDisposable
         }
 
         InputSnapshot snapshot = ReadSnapshot(_overlay.PreferredIndicatorSize);
-        IndicatorView view = Decider.Decide(snapshot);
+        IndicatorView view = Decider.Decide(snapshot, _idleReappearMs);
 
         if (view.Visible)
             _overlay.Render(view.Label, view.Position);
         else
             _overlay.HideIndicator();
 
-        // 편집 필드에 있는 동안엔(입력 중 숨김 상태여도) 폴링 유지 — 입력 활동/5초 유휴를
+        // 트레이 아이콘은 debounce와 무관하게 현재 입력 상태 글자를 반영한다.
+        // (langId==0은 포그라운드 창이 없는 경우 → 갱신 생략)
+        if (snapshot.KeyboardLangId != 0)
+        {
+            var state = Decider.ResolveState(snapshot.KeyboardLangId, snapshot.ConversionMode);
+            StateChanged?.Invoke(Decider.Label(state, snapshot.KeyboardLangId));
+        }
+
+        // 편집 필드에 있는 동안엔(입력 중 숨김 상태여도) 폴링 유지 — 입력 활동/약 20초 유휴를
         // 감지해야 다시 표시할 수 있음. 필드를 벗어나면 폴링 정지 → 유휴 CPU ~0.
         if (snapshot.EditableFocus)
         {
@@ -141,9 +159,9 @@ internal sealed class IndicatorController : IDisposable
     }
 
     // 캐럿 이동을 입력 활동으로 보고, 마지막 활동 이후 경과 ms를 돌려준다.
-    // 포커스 전환은 활동으로 치지 않는다(새 필드에선 즉시 표시되도록).
-    // 주의: 캐럿을 못 얻는 앱(크롬 폴백)에선 이동을 감지할 수 없어 debounce(입력 중 숨김)가
-    //       동작하지 않고 계속 표시된다 — 활동을 알 방법이 없으므로 의도된 한계.
+    // 포커스 시점을 활동 기준으로 삼는다 → 포커스만으로는 표시되지 않고, 약 20초 유휴해야 표시.
+    // 주의: 캐럿을 못 얻는 앱(크롬 폴백)에선 이동을 감지할 수 없어, 유휴 임계 후 표시되면
+    //       입력을 시작해도 숨겨지지 않는다 — 활동을 알 방법이 없으므로 의도된 한계.
     private long TrackActivity(Rectangle? caret)
     {
         long now = Environment.TickCount64;
@@ -152,7 +170,7 @@ internal sealed class IndicatorController : IDisposable
         {
             _pendingFocusReset = false;
             _lastCaret = caret;          // 기준선만 갱신
-            _lastActivityTick = now;     // 포커스 시점부터 유휴 카운트 시작(1분 지나야 표시)
+            _lastActivityTick = now;     // 포커스 시점부터 유휴 카운트 시작(약 20초 지나야 표시)
         }
         else if (caret is Rectangle c && _lastCaret is Rectangle last)
         {
