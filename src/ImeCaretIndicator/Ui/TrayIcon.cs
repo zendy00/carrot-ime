@@ -18,14 +18,15 @@ internal sealed class TrayIcon : IDisposable
 
     public TrayIcon(
         bool enabled, bool autoStart,
-        Action<bool> onEnabledChanged, Action<bool> onAutoStartChanged, Action onExit)
+        Action<bool> onEnabledChanged, Func<bool, bool> onAutoStartChanged, Action onExit)
     {
         // 체크 = 일시정지 상태(=꺼짐). CheckOnClick으로 Click 전에 Checked가 갱신됨.
         _pauseItem = new ToolStripMenuItem("일시정지") { Checked = !enabled, CheckOnClick = true };
         _pauseItem.Click += (_, _) => onEnabledChanged(!_pauseItem.Checked);
 
         _autoStartItem = new ToolStripMenuItem("Windows 시작 시 실행") { Checked = autoStart, CheckOnClick = true };
-        _autoStartItem.Click += (_, _) => onAutoStartChanged(_autoStartItem.Checked);
+        // 콜백이 실제 적용 결과(성공 여부)를 돌려주면 체크를 현실과 맞춘다.
+        _autoStartItem.Click += (_, _) => _autoStartItem.Checked = onAutoStartChanged(_autoStartItem.Checked);
 
         var exitItem = new ToolStripMenuItem("종료");
         exitItem.Click += (_, _) => onExit();

@@ -11,3 +11,10 @@
 - [ ] 설정에서 자동 시작을 켜면 재부팅 시 UAC 없이 자동 실행된다
 - [ ] 자동 시작을 끄면 작업 스케줄러 등록이 해제된다
 - [ ] 설정 값이 프로그램 재실행 후에도 유지된다
+
+## 리뷰 노트 (code-review)
+
+- **`dotnet run`에선 자동시작 등록 불가(정상):** `Environment.ProcessPath`가 `dotnet run` 시 dotnet 호스트를 가리켜서 엉뚱한 대상이 등록됨. `.exe`가 아니면 등록을 건너뛰도록 가드함 → **자동시작은 게시된 exe(07)에서만 동작**. 수동 검증은 게시본으로.
+- **적용된 수정:** schtasks 표준출력/에러 파이프를 끝까지 읽어 교착 방지 / Enable·Disable이 성공 여부(bool) 반환 / 트레이 체크를 실제 적용 결과로 재동기화(실패 시 체크 안 켜짐).
+- **저순위(문서화만):** AppSettings의 키 문자열("Enabled"/"AutoStart") Load·Save 양쪽 중복, 비원자적 Save(크래시 시 기본값 폴백), `AppSettings.AutoStart`(bool) vs `Adapters.AutoStart`(class) 이름 유사.
+- 트레이 렌더·스케줄러 등록·재부팅 무UAC 상승은 실기 수동 검증 대상.

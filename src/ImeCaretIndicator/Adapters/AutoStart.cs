@@ -13,15 +13,19 @@ internal static class AutoStart
 
     public static bool IsEnabled() => Run($"/Query /TN \"{TaskName}\"") == 0;
 
-    public static void Enable()
+    /// <summary>자동 시작을 등록한다. 성공하면 true.</summary>
+    public static bool Enable()
     {
         string exe = Environment.ProcessPath ?? "";
-        if (exe.Length == 0)
-            return;
-        Run($"/Create /TN \"{TaskName}\" /TR \"\\\"{exe}\\\"\" /SC ONLOGON /RL HIGHEST /F");
+        // `dotnet run`으로 실행하면 ProcessPath가 앱 exe가 아니라 dotnet 호스트를 가리키므로
+        // 잘못된 대상 등록을 피한다. 게시된 apphost(.exe)에서만 등록.
+        if (!exe.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            return false;
+        return Run($"/Create /TN \"{TaskName}\" /TR \"\\\"{exe}\\\"\" /SC ONLOGON /RL HIGHEST /F") == 0;
     }
 
-    public static void Disable() => Run($"/Delete /TN \"{TaskName}\" /F");
+    /// <summary>자동 시작 등록을 해제한다. 성공하면 true.</summary>
+    public static bool Disable() => Run($"/Delete /TN \"{TaskName}\" /F") == 0;
 
     private static int Run(string args)
     {
@@ -37,6 +41,9 @@ internal static class AutoStart
             using Process? p = Process.Start(psi);
             if (p is null)
                 return -1;
+            // 파이프를 끝까지 읽어 버퍼가 차서 자식이 막히는 것을 방지.
+            p.StandardOutput.ReadToEnd();
+            p.StandardError.ReadToEnd();
             p.WaitForExit(5000);
             return p.HasExited ? p.ExitCode : -1;
         }
