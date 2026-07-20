@@ -27,7 +27,7 @@ internal sealed class IndicatorController : IDisposable
 
     // 입력 활동(캐럿 이동) 추적 — debounce 표시용.
     private Rectangle? _lastCaret;
-    private long _lastActivityTick;
+    private long? _lastActivityTick; // null = 활동 기록 없음(유휴로 간주). TickCount64==0 충돌 방지.
     private bool _pendingFocusReset; // 포커스 변경은 활동으로 치지 않음(새 필드에선 바로 표시)
 
     public IndicatorController()
@@ -124,6 +124,8 @@ internal sealed class IndicatorController : IDisposable
 
     // 캐럿 이동을 입력 활동으로 보고, 마지막 활동 이후 경과 ms를 돌려준다.
     // 포커스 전환은 활동으로 치지 않는다(새 필드에선 즉시 표시되도록).
+    // 주의: 캐럿을 못 얻는 앱(크롬 폴백)에선 이동을 감지할 수 없어 debounce(입력 중 숨김)가
+    //       동작하지 않고 계속 표시된다 — 활동을 알 방법이 없으므로 의도된 한계.
     private long TrackActivity(Rectangle? caret)
     {
         long now = Environment.TickCount64;
@@ -131,8 +133,8 @@ internal sealed class IndicatorController : IDisposable
         if (_pendingFocusReset)
         {
             _pendingFocusReset = false;
-            _lastCaret = caret;      // 기준선만 갱신, 활동 아님
-            _lastActivityTick = 0;   // 유휴로 간주 → 표시
+            _lastCaret = caret;         // 기준선만 갱신, 활동 아님
+            _lastActivityTick = null;   // 유휴로 간주 → 표시
         }
         else if (caret is Rectangle c && _lastCaret is Rectangle last)
         {
@@ -145,7 +147,7 @@ internal sealed class IndicatorController : IDisposable
             _lastCaret = caret; // 이전에 캐럿이 없던 상태에서 기준선 확립
         }
 
-        return _lastActivityTick == 0 ? long.MaxValue : now - _lastActivityTick;
+        return _lastActivityTick is long tick ? now - tick : long.MaxValue;
     }
 
     private static Rectangle GetWindowBounds(IntPtr hwnd)
