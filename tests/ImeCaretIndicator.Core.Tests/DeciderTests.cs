@@ -6,9 +6,11 @@ namespace ImeCaretIndicator.Core.Tests;
 
 public class DeciderTests
 {
-    // Korean layout id = 0x0412, English (US) = 0x0409.
+    // Korean layout id = 0x0412, English (US) = 0x0409, Japanese = 0x0411, Chinese(PRC) = 0x0804.
     private const ushort Ko = 0x0412;
     private const ushort En = 0x0409;
+    private const ushort Ja = 0x0411;
+    private const ushort Zh = 0x0804;
     private const uint Native = 0x0001; // IME_CMODE_NATIVE (한글 조합)
     private const uint Alpha = 0x0000;  // 영문 모드
 
@@ -46,6 +48,26 @@ public class DeciderTests
 
     [Fact]
     public void English_label_is_yeong() => Assert.Equal("영", Decider.Label(InputState.English));
+
+    // ---- Ticket 05: 기타 IME (일본어·중국어 등) ----
+
+    [Fact]
+    public void Japanese_layout_is_other_ime()
+        => Assert.Equal(InputState.OtherIme, Decider.ResolveState(Ja, Native));
+
+    [Fact]
+    public void Chinese_layout_is_other_ime()
+        => Assert.Equal(InputState.OtherIme, Decider.ResolveState(Zh, Native));
+
+    [Fact]
+    public void Japanese_label_is_a() => Assert.Equal("あ", Decider.Label(InputState.OtherIme, Ja));
+
+    [Fact]
+    public void Chinese_label_is_zhong() => Assert.Equal("中", Decider.Label(InputState.OtherIme, Zh));
+
+    [Fact]
+    public void Unknown_ime_label_falls_back_to_IME()
+        => Assert.Equal("IME", Decider.Label(InputState.OtherIme, 0x0439)); // 그 외 언어(예: 힌디)
 
     // ---- 위치 · 표시 여부 ----
 
