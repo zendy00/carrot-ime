@@ -47,7 +47,7 @@ internal sealed class IndicatorController : IDisposable
     // 입력 활동(캐럿 이동) 추적 — debounce 표시용.
     private Rectangle? _lastCaret;
     private long? _lastActivityTick; // null = 활동 기록 없음(유휴로 간주). TickCount64==0 충돌 방지.
-    private bool _pendingFocusReset; // 포커스 시점부터 유휴 카운트 시작(포커스만으론 표시 안 함)
+    private IntPtr _lastForeground;   // 포그라운드 창 전환 감지용(전역 포커스 이벤트 잡음 무시)
 
     public IndicatorController()
     {
@@ -71,7 +71,8 @@ internal sealed class IndicatorController : IDisposable
     private void OnWinEvent(
         IntPtr hook, uint ev, IntPtr hwnd, int idObject, int idChild, uint thread, uint time)
     {
-        _pendingFocusReset = true; // 포커스/전면 전환 → 유휴 카운트 재시작(포커스만으론 표시 안 함)
+        // 전역 이벤트라 배경 앱 것도 들어온다 → 여기선 재평가만 하고, 유휴 리셋 여부는
+        // ReadSnapshot에서 '실제 포그라운드 창이 바뀌었는지'로 판단한다.
         Update();
     }
 
@@ -121,6 +122,7 @@ internal sealed class IndicatorController : IDisposable
         if (foreground == IntPtr.Zero)
         {
             _lastCaret = null;
+            _lastForeground = IntPtr.Zero;
             return new InputSnapshot(
                 EditableFocus: false,
                 Caret: null,
@@ -132,6 +134,11 @@ internal sealed class IndicatorController : IDisposable
                 MillisSinceInputActivity: long.MaxValue);
         }
 
+        // 실제 포그라운드 창이 바뀐 경우에만 유휴 카운트를 리셋한다(배경 앱의 전역 포커스
+        // 이벤트로는 리셋하지 않음 — 그게 20초 유휴를 계속 깨서 인디케이터가 안 뜨던 원인).
+        bool foregroundChanged = foreground != _lastForeground;
+        _lastForeground = foreground;
+
         uint threadId = Win32.GetWindowThreadProcessId(foreground, out _);
         var (langId, conversionMode) = ImeStateReader.Read(foreground, threadId);
         Rectangle? caret = Caret.Resolve(threadId);
@@ -139,7 +146,7 @@ internal sealed class IndicatorController : IDisposable
         // 캐럿을 얻었으면 편집 포커스 확정. 못 얻었을 때만 UIA로 텍스트 컨트롤 여부 추가 확인.
         bool editable = caret is not null || FocusInspector.IsTextControl();
 
-        long millisSinceActivity = TrackActivity(caret);
+        long millisSinceActivity = TrackActivity(caret, foregroundChanged);
 
         Rectangle activeWindow = GetWindowBounds(foreground);
         // 캐럿이 있으면 그 지점, 없으면(폴백) 배지가 놓일 활성 창 우상단이 속한 화면 기준.
@@ -159,18 +166,17 @@ internal sealed class IndicatorController : IDisposable
     }
 
     // 캐럿 이동을 입력 활동으로 보고, 마지막 활동 이후 경과 ms를 돌려준다.
-    // 포커스 시점을 활동 기준으로 삼는다 → 포커스만으로는 표시되지 않고, 약 20초 유휴해야 표시.
+    // 창 전환 시점을 활동 기준으로 삼는다 → 창을 바꾸면 그때부터, 약 20초 유휴해야 표시.
     // 주의: 캐럿을 못 얻는 앱(크롬 폴백)에선 이동을 감지할 수 없어, 유휴 임계 후 표시되면
     //       입력을 시작해도 숨겨지지 않는다 — 활동을 알 방법이 없으므로 의도된 한계.
-    private long TrackActivity(Rectangle? caret)
+    private long TrackActivity(Rectangle? caret, bool foregroundChanged)
     {
         long now = Environment.TickCount64;
 
-        if (_pendingFocusReset)
+        if (foregroundChanged)
         {
-            _pendingFocusReset = false;
             _lastCaret = caret;          // 기준선만 갱신
-            _lastActivityTick = now;     // 포커스 시점부터 유휴 카운트 시작(약 20초 지나야 표시)
+            _lastActivityTick = now;     // 창 전환 시점부터 유휴 카운트 시작(약 20초 지나야 표시)
         }
         else if (caret is Rectangle c && _lastCaret is Rectangle last)
         {
