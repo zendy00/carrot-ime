@@ -14,7 +14,7 @@ public class DeciderTests
 
     private static InputSnapshot Snap(
         Rectangle? caret, ushort lang = En, uint mode = Alpha, bool editable = true,
-        Rectangle? activeWindow = null)
+        Rectangle? activeWindow = null, long millisSinceActivity = 10_000)
         => new(
             EditableFocus: editable,
             Caret: caret,
@@ -22,7 +22,8 @@ public class DeciderTests
             ScreenBounds: new Rectangle(0, 0, 1920, 1080),
             IndicatorSize: new Size(24, 20),
             KeyboardLangId: lang,
-            ConversionMode: mode);
+            ConversionMode: mode,
+            MillisSinceInputActivity: millisSinceActivity);
 
     // ---- 상태 판별 ----
 
@@ -111,5 +112,25 @@ public class DeciderTests
     {
         var view = Decider.Decide(Snap(caret: null, editable: false));
         Assert.False(view.Visible);
+    }
+
+    // ---- Debounce: 입력 중엔 숨기고, 5초 이상 유휴면 다시 표시 ----
+
+    [Fact]
+    public void Recent_input_activity_hides_indicator_while_typing()
+    {
+        // 방금(0.1초 전) 캐럿이 움직임 = 입력 중 → 숨김
+        var view = Decider.Decide(
+            Snap(new Rectangle(100, 200, 2, 16), Ko, Native, millisSinceActivity: 100));
+        Assert.False(view.Visible);
+    }
+
+    [Fact]
+    public void Indicator_reappears_after_five_seconds_idle()
+    {
+        var view = Decider.Decide(
+            Snap(new Rectangle(100, 200, 2, 16), Ko, Native, millisSinceActivity: 5_000));
+        Assert.True(view.Visible);
+        Assert.Equal("한", view.Label);
     }
 }

@@ -13,4 +13,6 @@ public readonly record struct InputSnapshot(
     Rectangle ScreenBounds,
     Size IndicatorSize,
     ushort KeyboardLangId,
-    uint ConversionMode);
+    uint ConversionMode,
+    // 마지막 입력 활동(캐럿 이동) 이후 경과 밀리초. 활동을 알 수 없으면 큰 값(유휴로 간주).
+    long MillisSinceInputActivity);

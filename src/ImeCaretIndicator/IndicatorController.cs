@@ -25,6 +25,11 @@ internal sealed class IndicatorController : IDisposable
     private IntPtr _foregroundHook;
     private IntPtr _focusHook;
 
+    // 입력 활동(캐럿 이동) 추적 — debounce 표시용.
+    private Rectangle? _lastCaret;
+    private long _lastActivityTick;
+    private bool _pendingFocusReset; // 포커스 변경은 활동으로 치지 않음(새 필드에선 바로 표시)
+
     public IndicatorController()
     {
         _ = _overlay.Handle; // 표시 전 핸들 생성
@@ -46,7 +51,10 @@ internal sealed class IndicatorController : IDisposable
     // OUTOFCONTEXT 콜백은 이 스레드의 메시지 루프에서 호출됨 → 오버레이 직접 조작 안전
     private void OnWinEvent(
         IntPtr hook, uint ev, IntPtr hwnd, int idObject, int idChild, uint thread, uint time)
-        => Update();
+    {
+        _pendingFocusReset = true; // 포커스/전면 전환 → 활동 리셋(새 필드에선 즉시 표시)
+        Update();
+    }
 
     private void Update()
     {
@@ -54,23 +62,29 @@ internal sealed class IndicatorController : IDisposable
         IndicatorView view = Decider.Decide(snapshot);
 
         if (view.Visible)
-        {
             _overlay.Render(view.Label, view.Position);
-            if (!_inputStateTimer.Enabled)
-                _inputStateTimer.Start(); // 텍스트 필드 있는 동안만 한/영 폴링
-        }
         else
-        {
             _overlay.HideIndicator();
-            if (_inputStateTimer.Enabled)
-                _inputStateTimer.Stop(); // 유휴 → 폴링 정지 (CPU ~0)
+
+        // 편집 필드에 있는 동안엔(입력 중 숨김 상태여도) 폴링 유지 — 입력 활동/5초 유휴를
+        // 감지해야 다시 표시할 수 있음. 필드를 벗어나면 폴링 정지 → 유휴 CPU ~0.
+        if (snapshot.EditableFocus)
+        {
+            if (!_inputStateTimer.Enabled)
+                _inputStateTimer.Start();
+        }
+        else if (_inputStateTimer.Enabled)
+        {
+            _inputStateTimer.Stop();
         }
     }
 
-    private static InputSnapshot ReadSnapshot(Size indicatorSize)
+    private InputSnapshot ReadSnapshot(Size indicatorSize)
     {
         IntPtr foreground = Win32.GetForegroundWindow();
         if (foreground == IntPtr.Zero)
+        {
+            _lastCaret = null;
             return new InputSnapshot(
                 EditableFocus: false,
                 Caret: null,
@@ -78,7 +92,9 @@ internal sealed class IndicatorController : IDisposable
                 ScreenBounds: Rectangle.Empty,
                 IndicatorSize: indicatorSize,
                 KeyboardLangId: 0,
-                ConversionMode: 0);
+                ConversionMode: 0,
+                MillisSinceInputActivity: long.MaxValue);
+        }
 
         uint threadId = Win32.GetWindowThreadProcessId(foreground, out _);
         var (langId, conversionMode) = ImeStateReader.Read(foreground, threadId);
@@ -86,6 +102,8 @@ internal sealed class IndicatorController : IDisposable
 
         // 캐럿을 얻었으면 편집 포커스 확정. 못 얻었을 때만 UIA로 텍스트 컨트롤 여부 추가 확인.
         bool editable = caret is not null || FocusInspector.IsTextControl();
+
+        long millisSinceActivity = TrackActivity(caret);
 
         Rectangle activeWindow = GetWindowBounds(foreground);
         // 캐럿이 있으면 그 지점, 없으면(폴백) 배지가 놓일 활성 창 우상단이 속한 화면 기준.
@@ -100,7 +118,34 @@ internal sealed class IndicatorController : IDisposable
             ScreenBounds: screen,
             IndicatorSize: indicatorSize,
             KeyboardLangId: langId,
-            ConversionMode: conversionMode);
+            ConversionMode: conversionMode,
+            MillisSinceInputActivity: millisSinceActivity);
+    }
+
+    // 캐럿 이동을 입력 활동으로 보고, 마지막 활동 이후 경과 ms를 돌려준다.
+    // 포커스 전환은 활동으로 치지 않는다(새 필드에선 즉시 표시되도록).
+    private long TrackActivity(Rectangle? caret)
+    {
+        long now = Environment.TickCount64;
+
+        if (_pendingFocusReset)
+        {
+            _pendingFocusReset = false;
+            _lastCaret = caret;      // 기준선만 갱신, 활동 아님
+            _lastActivityTick = 0;   // 유휴로 간주 → 표시
+        }
+        else if (caret is Rectangle c && _lastCaret is Rectangle last)
+        {
+            if (c != last)
+                _lastActivityTick = now; // 캐럿이 움직임 = 입력 중
+            _lastCaret = caret;
+        }
+        else if (caret is not null)
+        {
+            _lastCaret = caret; // 이전에 캐럿이 없던 상태에서 기준선 확립
+        }
+
+        return _lastActivityTick == 0 ? long.MaxValue : now - _lastActivityTick;
     }
 
     private static Rectangle GetWindowBounds(IntPtr hwnd)

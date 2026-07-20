@@ -21,6 +21,9 @@ public static class Decider
     // 고정 폴백 위치(활성 창 우상단)의 안쪽 여백.
     private const int FallbackMargin = 6;
 
+    // 입력 중에는 숨기고, 이만큼 유휴하면 다시 표시(ms).
+    private const long IdleReappearMs = 5_000;
+
     /// <summary>키보드 레이아웃 언어 ID와 IME 조합 모드로 입력 상태를 판별한다. (Ticket 01: 한글/영문)</summary>
     public static InputState ResolveState(ushort keyboardLangId, uint conversionMode)
     {
@@ -46,6 +49,10 @@ public static class Decider
 
         // Ticket 03: 편집 가능한 텍스트 포커스가 있을 때만 표시.
         if (!s.EditableFocus)
+            return IndicatorView.Hidden;
+
+        // 입력 중(최근 캐럿 이동)에는 방해하지 않도록 숨기고, 5초 이상 유휴하면 다시 표시.
+        if (s.MillisSinceInputActivity < IdleReappearMs)
             return IndicatorView.Hidden;
 
         // 캐럿을 얻으면 캐럿 오른쪽에, 못 얻으면(크롬 등) 활성 창 우상단에 폴백(Ticket 04).

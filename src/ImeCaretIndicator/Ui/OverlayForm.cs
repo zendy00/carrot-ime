@@ -15,7 +15,7 @@ internal sealed class OverlayForm : Form
     // macOS 시스템 블루
     private static readonly Color CircleColor = Color.FromArgb(0, 122, 255);
 
-    private const int Diameter = 28;
+    private const int Diameter = 20;
 
     private string _label = string.Empty;
 
@@ -27,7 +27,7 @@ internal sealed class OverlayForm : Form
         StartPosition = FormStartPosition.Manual;
         BackColor = CircleColor;
         DoubleBuffered = true;
-        Font = new Font("Segoe UI", 11f, FontStyle.Bold);
+        Font = new Font("Segoe UI", 9f, FontStyle.Bold);
         Size = new Size(Diameter, Diameter);
     }
 
