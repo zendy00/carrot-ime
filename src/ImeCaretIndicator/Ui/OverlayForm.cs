@@ -85,13 +85,9 @@ internal sealed class OverlayForm : Form
     protected override void OnPaint(PaintEventArgs e)
     {
         var g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
         g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
-        // 원형(Region이 클립하므로 안쪽만 채워진다)
-        using var brush = new SolidBrush(CircleColor);
-        g.FillEllipse(brush, 0, 0, Diameter - 1, Diameter - 1);
-
+        // 파란 원형 배경은 BackColor + 원형 Region 클립으로 이미 그려진다.
         // 흰 글자 가운데 정렬
         using var text = new SolidBrush(Color.White);
         using var fmt = new StringFormat

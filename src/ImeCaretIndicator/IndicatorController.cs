@@ -71,7 +71,14 @@ internal sealed class IndicatorController : IDisposable
     {
         IntPtr foreground = Win32.GetForegroundWindow();
         if (foreground == IntPtr.Zero)
-            return new InputSnapshot(false, null, Rectangle.Empty, Rectangle.Empty, indicatorSize, 0, 0);
+            return new InputSnapshot(
+                EditableFocus: false,
+                Caret: null,
+                ActiveWindowBounds: Rectangle.Empty,
+                ScreenBounds: Rectangle.Empty,
+                IndicatorSize: indicatorSize,
+                KeyboardLangId: 0,
+                ConversionMode: 0);
 
         uint threadId = Win32.GetWindowThreadProcessId(foreground, out _);
         var (langId, conversionMode) = ImeStateReader.Read(foreground, threadId);
@@ -81,12 +88,19 @@ internal sealed class IndicatorController : IDisposable
         bool editable = caret is not null || FocusInspector.IsTextControl();
 
         Rectangle activeWindow = GetWindowBounds(foreground);
-        // 캐럿이 있으면 그 화면, 없으면(폴백) 활성 창이 놓인 화면 기준.
-        Point anchor = caret?.Location ?? new Point(activeWindow.Left, activeWindow.Top);
+        // 캐럿이 있으면 그 지점, 없으면(폴백) 배지가 놓일 활성 창 우상단이 속한 화면 기준.
+        // (우상단 기준으로 골라야 멀티모니터에서 배지가 엉뚱한 화면으로 클램프되지 않음)
+        Point anchor = caret?.Location ?? new Point(activeWindow.Right, activeWindow.Top);
         Rectangle screen = Screen.FromPoint(anchor).Bounds;
 
         return new InputSnapshot(
-            editable, caret, activeWindow, screen, indicatorSize, langId, conversionMode);
+            EditableFocus: editable,
+            Caret: caret,
+            ActiveWindowBounds: activeWindow,
+            ScreenBounds: screen,
+            IndicatorSize: indicatorSize,
+            KeyboardLangId: langId,
+            ConversionMode: conversionMode);
     }
 
     private static Rectangle GetWindowBounds(IntPtr hwnd)
