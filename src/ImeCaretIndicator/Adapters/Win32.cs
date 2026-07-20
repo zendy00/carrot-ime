@@ -101,4 +101,8 @@ internal static class Win32
     internal const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
     internal const uint EVENT_OBJECT_FOCUS = 0x8005;
     internal const uint WINEVENT_OUTOFCONTEXT = 0x0000;
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool DestroyIcon(IntPtr hIcon);
 }

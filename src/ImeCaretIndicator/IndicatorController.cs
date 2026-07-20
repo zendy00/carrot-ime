@@ -25,6 +25,15 @@ internal sealed class IndicatorController : IDisposable
     private IntPtr _foregroundHook;
     private IntPtr _focusHook;
 
+    private bool _enabled = true;
+
+    /// <summary>일시정지 토글. 앱 수명주기(입력 사실이 아님)라 셸에서 게이트한다.</summary>
+    public bool Enabled
+    {
+        get => _enabled;
+        set { _enabled = value; Update(); }
+    }
+
     // 입력 활동(캐럿 이동) 추적 — debounce 표시용.
     private Rectangle? _lastCaret;
     private long? _lastActivityTick; // null = 활동 기록 없음(유휴로 간주). TickCount64==0 충돌 방지.
@@ -58,6 +67,15 @@ internal sealed class IndicatorController : IDisposable
 
     private void Update()
     {
+        // 일시정지 상태면 아무것도 표시하지 않고 폴링도 멈춘다(앱 on/off는 셸 관심사).
+        if (!_enabled)
+        {
+            _overlay.HideIndicator();
+            if (_inputStateTimer.Enabled)
+                _inputStateTimer.Stop();
+            return;
+        }
+
         InputSnapshot snapshot = ReadSnapshot(_overlay.PreferredIndicatorSize);
         IndicatorView view = Decider.Decide(snapshot);
 
