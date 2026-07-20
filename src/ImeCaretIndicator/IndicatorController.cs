@@ -71,7 +71,7 @@ internal sealed class IndicatorController : IDisposable
     {
         IntPtr foreground = Win32.GetForegroundWindow();
         if (foreground == IntPtr.Zero)
-            return new InputSnapshot(false, null, Rectangle.Empty, indicatorSize, 0, 0);
+            return new InputSnapshot(false, null, Rectangle.Empty, Rectangle.Empty, indicatorSize, 0, 0);
 
         uint threadId = Win32.GetWindowThreadProcessId(foreground, out _);
         var (langId, conversionMode) = ImeStateReader.Read(foreground, threadId);
@@ -80,8 +80,20 @@ internal sealed class IndicatorController : IDisposable
         // 캐럿을 얻었으면 편집 포커스 확정. 못 얻었을 때만 UIA로 텍스트 컨트롤 여부 추가 확인.
         bool editable = caret is not null || FocusInspector.IsTextControl();
 
-        Rectangle screen = Screen.FromPoint(caret?.Location ?? Cursor.Position).Bounds;
-        return new InputSnapshot(editable, caret, screen, indicatorSize, langId, conversionMode);
+        Rectangle activeWindow = GetWindowBounds(foreground);
+        // 캐럿이 있으면 그 화면, 없으면(폴백) 활성 창이 놓인 화면 기준.
+        Point anchor = caret?.Location ?? new Point(activeWindow.Left, activeWindow.Top);
+        Rectangle screen = Screen.FromPoint(anchor).Bounds;
+
+        return new InputSnapshot(
+            editable, caret, activeWindow, screen, indicatorSize, langId, conversionMode);
+    }
+
+    private static Rectangle GetWindowBounds(IntPtr hwnd)
+    {
+        if (Win32.GetWindowRect(hwnd, out var r))
+            return new Rectangle(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
+        return Rectangle.Empty;
     }
 
     public void Dispose()

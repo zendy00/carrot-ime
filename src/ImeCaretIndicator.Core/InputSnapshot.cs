@@ -9,6 +9,7 @@ namespace ImeCaretIndicator.Core;
 public readonly record struct InputSnapshot(
     bool EditableFocus,
     Rectangle? Caret,
+    Rectangle ActiveWindowBounds,
     Rectangle ScreenBounds,
     Size IndicatorSize,
     ushort KeyboardLangId,

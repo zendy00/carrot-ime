@@ -18,6 +18,9 @@ public static class Decider
     // 캐럿과 인디케이터 사이 간격 — 방금 친 글자를 가리지 않도록.
     private const int CaretGapX = 4;
 
+    // 고정 폴백 위치(활성 창 우상단)의 안쪽 여백.
+    private const int FallbackMargin = 6;
+
     /// <summary>키보드 레이아웃 언어 ID와 IME 조합 모드로 입력 상태를 판별한다. (Ticket 01: 한글/영문)</summary>
     public static InputState ResolveState(ushort keyboardLangId, uint conversionMode)
     {
@@ -45,17 +48,17 @@ public static class Decider
         if (!s.EditableFocus)
             return IndicatorView.Hidden;
 
-        // 캐럿을 얻었을 때만 캐럿 옆에 표시. (Ticket 04: 편집 포커스 O + 캐럿 X → 고정 위치 폴백)
-        if (s.Caret is not Rectangle caret)
-            return IndicatorView.Hidden;
+        // 캐럿을 얻으면 캐럿 오른쪽에, 못 얻으면(크롬 등) 활성 창 우상단에 폴백(Ticket 04).
+        Point desired = s.Caret is Rectangle caret
+            ? new Point(caret.Right + CaretGapX, caret.Top)
+            : FallbackTopRight(s.ActiveWindowBounds, s.IndicatorSize);
 
-        var position = ClampToScreen(
-            new Point(caret.Right + CaretGapX, caret.Top),
-            s.IndicatorSize,
-            s.ScreenBounds);
-
-        return new IndicatorView(true, label, position);
+        return new IndicatorView(true, label, ClampToScreen(desired, s.IndicatorSize, s.ScreenBounds));
     }
+
+    // 활성 창 우상단 안쪽.
+    private static Point FallbackTopRight(Rectangle window, Size size)
+        => new(window.Right - size.Width - FallbackMargin, window.Top + FallbackMargin);
 
     // 인디케이터가 화면 밖으로 잘리지 않도록 대상 화면 경계 안으로 보정.
     private static Point ClampToScreen(Point desired, Size size, Rectangle screen)

@@ -55,6 +55,10 @@ internal static class Win32
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
 
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
     [DllImport("imm32.dll")]
     internal static extern IntPtr ImmGetDefaultIMEWnd(IntPtr hWnd);
 

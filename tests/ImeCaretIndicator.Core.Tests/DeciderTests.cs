@@ -12,10 +12,13 @@ public class DeciderTests
     private const uint Native = 0x0001; // IME_CMODE_NATIVE (한글 조합)
     private const uint Alpha = 0x0000;  // 영문 모드
 
-    private static InputSnapshot Snap(Rectangle? caret, ushort lang = En, uint mode = Alpha, bool editable = true)
+    private static InputSnapshot Snap(
+        Rectangle? caret, ushort lang = En, uint mode = Alpha, bool editable = true,
+        Rectangle? activeWindow = null)
         => new(
             EditableFocus: editable,
             Caret: caret,
+            ActiveWindowBounds: activeWindow ?? new Rectangle(200, 100, 800, 600),
             ScreenBounds: new Rectangle(0, 0, 1920, 1080),
             IndicatorSize: new Size(24, 20),
             KeyboardLangId: lang,
@@ -65,18 +68,48 @@ public class DeciderTests
         Assert.True(view.Position.X + 24 <= 1920, "indicator must not overflow the screen right edge");
     }
 
-    [Fact]
-    public void No_caret_hides_indicator()
-    {
-        var view = Decider.Decide(Snap(caret: null));
-        Assert.False(view.Visible);
-    }
+    // (구 "No_caret_hides_indicator"는 Ticket 04 고정 폴백 도입으로 폐기 —
+    //  편집 포커스 + 캐럿 없음은 이제 숨김이 아니라 폴백 표시. 아래 04 테스트가 대체.)
 
     [Fact]
     public void No_editable_focus_hides_indicator_even_when_a_caret_is_present()
     {
         // 편집 포커스가 아니면(바탕화면·버튼 등) 캐럿이 있어도 숨긴다.
         var view = Decider.Decide(Snap(new Rectangle(100, 200, 2, 16), Ko, Native, editable: false));
+        Assert.False(view.Visible);
+    }
+
+    // ---- Ticket 04: 캐럿 못 얻는 앱의 고정 위치 폴백 ----
+
+    [Fact]
+    public void Editable_focus_without_caret_falls_back_to_active_window_top_right()
+    {
+        var win = new Rectangle(200, 100, 800, 600); // right=1000, top=100
+        var view = Decider.Decide(Snap(caret: null, lang: Ko, mode: Native, activeWindow: win));
+
+        Assert.True(view.Visible);
+        Assert.Equal("한", view.Label);
+        // 우상단: 창 오른쪽에서 인디케이터 폭+여백만큼 안쪽, 위에서 여백만큼 아래
+        Assert.True(view.Position.X < win.Right, "우상단이므로 창 오른쪽 경계 안이어야 한다");
+        Assert.True(view.Position.X > win.Left + win.Width / 2, "우측 절반에 있어야 한다");
+        Assert.True(view.Position.Y >= win.Top && view.Position.Y < win.Top + 100, "상단 근처여야 한다");
+    }
+
+    [Fact]
+    public void Fallback_position_is_clamped_within_screen()
+    {
+        // 활성 창이 화면 오른쪽 밖으로 걸쳐 있어도 인디케이터는 화면 안에 있어야 한다.
+        var win = new Rectangle(1800, 0, 400, 300); // right=2200 (화면 밖)
+        var view = Decider.Decide(Snap(caret: null, editable: true, activeWindow: win));
+
+        Assert.True(view.Visible);
+        Assert.True(view.Position.X + 24 <= 1920, "인디케이터가 화면 오른쪽 밖으로 나가면 안 된다");
+    }
+
+    [Fact]
+    public void No_editable_focus_and_no_caret_still_hidden()
+    {
+        var view = Decider.Decide(Snap(caret: null, editable: false));
         Assert.False(view.Visible);
     }
 }
