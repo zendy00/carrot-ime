@@ -19,7 +19,7 @@ internal sealed class IndicatorController : IDisposable
         MsaaCaret.TryGet);
 
     private readonly OverlayForm _overlay = new();
-    private readonly System.Windows.Forms.Timer _imeTimer;
+    private readonly System.Windows.Forms.Timer _inputStateTimer;
     private readonly Win32.WinEventProc _winEventProc; // GC 방지: 필드로 참조 유지
 
     private IntPtr _foregroundHook;
@@ -28,8 +28,8 @@ internal sealed class IndicatorController : IDisposable
     public IndicatorController()
     {
         _ = _overlay.Handle; // 표시 전 핸들 생성
-        _imeTimer = new System.Windows.Forms.Timer { Interval = 120 };
-        _imeTimer.Tick += (_, _) => Update();
+        _inputStateTimer = new System.Windows.Forms.Timer { Interval = 120 };
+        _inputStateTimer.Tick += (_, _) => Update();
         _winEventProc = OnWinEvent;
     }
 
@@ -56,14 +56,14 @@ internal sealed class IndicatorController : IDisposable
         if (view.Visible)
         {
             _overlay.Render(view.Label, view.Position);
-            if (!_imeTimer.Enabled)
-                _imeTimer.Start(); // 텍스트 필드 있는 동안만 한/영 폴링
+            if (!_inputStateTimer.Enabled)
+                _inputStateTimer.Start(); // 텍스트 필드 있는 동안만 한/영 폴링
         }
         else
         {
             _overlay.HideIndicator();
-            if (_imeTimer.Enabled)
-                _imeTimer.Stop(); // 유휴 → 폴링 정지 (CPU ~0)
+            if (_inputStateTimer.Enabled)
+                _inputStateTimer.Stop(); // 유휴 → 폴링 정지 (CPU ~0)
         }
     }
 
@@ -90,7 +90,7 @@ internal sealed class IndicatorController : IDisposable
             Win32.UnhookWinEvent(_foregroundHook);
         if (_focusHook != IntPtr.Zero)
             Win32.UnhookWinEvent(_focusHook);
-        _imeTimer.Dispose();
+        _inputStateTimer.Dispose();
         _overlay.Dispose();
     }
 }

@@ -12,10 +12,14 @@ internal static class ImeStateReader
         IntPtr imeWnd = Win32.ImmGetDefaultIMEWnd(foreground);
         if (imeWnd != IntPtr.Zero)
         {
-            // 크로스 프로세스로 현재 조합 모드를 질의 (한/영 상태)
-            IntPtr result = Win32.SendMessage(
-                imeWnd, Win32.WM_IME_CONTROL, (IntPtr)Win32.IMC_GETCONVERSIONMODE, IntPtr.Zero);
-            conversionMode = (uint)result.ToInt64();
+            // 크로스 프로세스로 현재 조합 모드를 질의 (한/영 상태).
+            // 멈춘 앱이 UI 스레드를 물지 않도록 타임아웃 + ABORTIFHUNG 사용.
+            if (Win32.SendMessageTimeout(
+                    imeWnd, Win32.WM_IME_CONTROL, (IntPtr)Win32.IMC_GETCONVERSIONMODE, IntPtr.Zero,
+                    Win32.SMTO_ABORTIFHUNG, 200, out IntPtr result) != IntPtr.Zero)
+            {
+                conversionMode = (uint)result.ToInt64();
+            }
         }
 
         return (langId, conversionMode);

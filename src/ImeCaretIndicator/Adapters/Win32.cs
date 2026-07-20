@@ -59,10 +59,13 @@ internal static class Win32
     internal static extern IntPtr ImmGetDefaultIMEWnd(IntPtr hWnd);
 
     [DllImport("user32.dll")]
-    internal static extern IntPtr SendMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+    internal static extern IntPtr SendMessageTimeout(
+        IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam,
+        uint flags, uint timeoutMs, out IntPtr result);
 
     internal const uint WM_IME_CONTROL = 0x0283;
     internal const int IMC_GETCONVERSIONMODE = 0x0001;
+    internal const uint SMTO_ABORTIFHUNG = 0x0002;
 
     // OverlayForm의 클릭통과·최상단·비활성 오버레이용 확장 스타일
     internal const int WS_EX_LAYERED = 0x00080000;

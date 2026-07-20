@@ -19,8 +19,9 @@ internal static class FocusInspector
             if (focused.GetCurrentPropertyValue(AutomationElement.IsTextPatternAvailableProperty) is true)
                 return true;
 
+            // ComboBox는 비편집 드롭다운도 있어 오판 소지 → TextPattern으로만 편집형 콤보를 인정.
             ControlType ct = focused.Current.ControlType;
-            return ct == ControlType.Edit || ct == ControlType.Document || ct == ControlType.ComboBox;
+            return ct == ControlType.Edit || ct == ControlType.Document;
         }
         catch
         {

@@ -11,3 +11,9 @@
 - [ ] 창을 전환하면 표시 여부가 즉시 갱신된다
 - [ ] 아무 입력이 없을 때 유휴 CPU 사용이 거의 0에 수렴한다
 - [ ] 결정 코어 `Decide`의 표시/숨김 규칙이 단위 테스트로 검증된다
+
+## 리뷰 노트 (code-review)
+
+- **유휴 CPU 측정 조건:** "유휴 ~0"은 **편집 포커스가 없을 때** 성립(타이머 정지). 텍스트 필드에 포커스가 있는 동안은 키 입력이 없어도 120ms 타이머가 계속 돎(~8회/초, 캐럿 추종·한/영 감지용). 스펙이 허용한 "가벼운 폴링 보완"이나, **포커스된 유휴 메모장에서 CPU 측정**을 수동 체크에 포함.
+- **전역 focus 훅 부하:** `EVENT_OBJECT_FOCUS`를 전역(idProcess 0)으로 후킹 → 모든 앱의 포커스 변화마다 `Update()`. 멈춘 앱 대비 IME 질의는 `SendMessageTimeout`으로 완화함. 메뉴 조작 등 포커스 폭주 시 CPU/지연은 실기 확인 대상.
+- **적용된 수정:** SendMessage→SendMessageTimeout(ABORTIFHUNG), FocusInspector에서 ComboBox 제외, `_imeTimer`→`_inputStateTimer` 리네임.
