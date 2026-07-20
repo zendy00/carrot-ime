@@ -39,14 +39,14 @@ internal static class MsaaCaret
         }
         catch
         {
+            // MSAA/COM 호출도 예외를 던질 수 있음 → 캐럿 못 얻은 것으로 보고 다음(없음)으로 폴백
             return null;
         }
     }
 
     private static IntPtr FocusHwnd(uint threadId)
     {
-        var gti = new Win32.GUITHREADINFO { cbSize = Marshal.SizeOf<Win32.GUITHREADINFO>() };
-        if (!Win32.GetGUIThreadInfo(threadId, ref gti))
+        if (!Win32.TryGetGuiThreadInfo(threadId, out var gti))
             return IntPtr.Zero;
         return gti.hwndFocus != IntPtr.Zero ? gti.hwndFocus : gti.hwndCaret;
     }

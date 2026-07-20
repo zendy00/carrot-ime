@@ -44,6 +44,13 @@ internal static class Win32
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool GetGUIThreadInfo(uint idThread, ref GUITHREADINFO lpgui);
 
+    /// <summary>cbSize 초기화까지 포함한 GetGUIThreadInfo 래퍼. (복붙 방지)</summary>
+    internal static bool TryGetGuiThreadInfo(uint threadId, out GUITHREADINFO gti)
+    {
+        gti = new GUITHREADINFO { cbSize = Marshal.SizeOf<GUITHREADINFO>() };
+        return GetGUIThreadInfo(threadId, ref gti);
+    }
+
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);

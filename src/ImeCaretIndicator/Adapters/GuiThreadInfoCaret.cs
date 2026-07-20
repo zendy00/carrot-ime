@@ -1,5 +1,4 @@
 using System.Drawing;
-using System.Runtime.InteropServices;
 
 namespace ImeCaretIndicator.Adapters;
 
@@ -8,8 +7,7 @@ internal static class GuiThreadInfoCaret
 {
     public static Rectangle? TryGet(uint threadId)
     {
-        var gti = new Win32.GUITHREADINFO { cbSize = Marshal.SizeOf<Win32.GUITHREADINFO>() };
-        if (!Win32.GetGUIThreadInfo(threadId, ref gti) || gti.hwndCaret == IntPtr.Zero)
+        if (!Win32.TryGetGuiThreadInfo(threadId, out var gti) || gti.hwndCaret == IntPtr.Zero)
             return null;
 
         var r = gti.rcCaret;
