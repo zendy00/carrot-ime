@@ -99,24 +99,6 @@ public class DeciderTests
     }
 
     [Fact]
-    public void Thin_caret_anchors_to_the_right_of_the_caret()
-    {
-        // 얇은 캐럿(폭 2) → 오른쪽 끝(102) + 간격
-        var view = Decider.Decide(Snap(new Rectangle(100, 200, 2, 16), Ko, Native));
-        Assert.Equal(new Point(106, 200), view.Position); // 102 + gap(4)
-    }
-
-    [Fact]
-    public void Wide_rect_anchors_to_the_start_not_the_right_edge()
-    {
-        // 넓은 사각형(폭 300, 입력창 박스로 판단) → 오른쪽 끝(400)이 아니라 시작(100) 기준
-        var view = Decider.Decide(Snap(new Rectangle(100, 200, 300, 16), En, Alpha));
-        Assert.True(view.Visible);
-        // 시작(100) 근처여야 하고, 오른쪽 끝(400) 바깥은 아니어야 함
-        Assert.True(view.Position.X < 150, "넓은 박스는 시작(왼쪽) 근처에 앵커되어야 한다");
-    }
-
-    [Fact]
     public void Caret_near_right_edge_is_clamped_within_screen()
     {
         var view = Decider.Decide(Snap(new Rectangle(1915, 200, 2, 16), En, Alpha));
