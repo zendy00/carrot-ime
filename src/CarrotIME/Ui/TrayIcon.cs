@@ -83,6 +83,9 @@ internal sealed class TrayIcon : IDisposable
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(exitItem);
 
+        // 열릴 때마다 윈도우 다크/라이트 테마에 맞춰 색을 적용.
+        menu.Opening += (_, _) => MenuTheme.Apply(menu);
+
         _icon = new NotifyIcon
         {
             Icon = CreateGlyphIcon(string.Empty),
