@@ -8,13 +8,10 @@ namespace CarrotIME.Ui;
 
 /// <summary>
 /// 캐럿 옆에 라벨 하나를 그리는 테두리 없는·최상단·클릭통과·비활성 오버레이 창.
-/// macOS 입력 소스 표시기처럼 파란 원형 배경 + 흰 글자. 항상 100% 불투명(스펙: 항상 또렷).
+/// macOS 입력 소스 표시기처럼 원형 배경(색은 팔레트에서 선택) + 흰 글자. 항상 100% 불투명.
 /// </summary>
 internal sealed class OverlayForm : Form
 {
-    // macOS 시스템 블루
-    private static readonly Color CircleColor = Color.FromArgb(0, 122, 255);
-
     private const int Diameter = 20;
 
     private string _label = string.Empty;
@@ -25,11 +22,14 @@ internal sealed class OverlayForm : Form
         ShowInTaskbar = false;
         TopMost = true;
         StartPosition = FormStartPosition.Manual;
-        BackColor = CircleColor;
+        BackColor = IndicatorPalette.Default;
         DoubleBuffered = true;
         Font = new Font("Segoe UI", 9f, FontStyle.Bold);
         Size = new Size(Diameter, Diameter);
     }
+
+    /// <summary>원형 배경색을 바꾼다(BackColor가 곧 원 색이며, 설정 시 자동 다시 그림).</summary>
+    public void SetColor(Color color) => BackColor = color;
 
     public Size PreferredIndicatorSize => Size;
 

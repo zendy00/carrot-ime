@@ -41,6 +41,12 @@ internal sealed class IndicatorController : IDisposable
         set { _idleReappearMs = value * 1000L; Update(); }
     }
 
+    /// <summary>인디케이터(캐럿 옆 원) 배경색. 사용자 설정.</summary>
+    public Color IndicatorColor
+    {
+        set => _overlay.SetColor(value);
+    }
+
     /// <summary>현재 입력 상태 글자(한/영/あ 등)를 알린다. 트레이 아이콘 갱신용.</summary>
     public Action<string>? StateChanged { get; set; }
 

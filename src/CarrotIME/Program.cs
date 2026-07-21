@@ -1,3 +1,4 @@
+using System.Drawing;
 using System.Windows.Forms;
 using CarrotIME.Adapters;
 using CarrotIME.Ui;
@@ -15,14 +16,18 @@ internal static class Program
 
         AppSettings settings = AppSettings.Load();
 
+        Color indicatorColor = Color.FromArgb(settings.IndicatorColorArgb);
+
         using var controller = new IndicatorController();
         controller.IdleSeconds = settings.IdleSeconds;
+        controller.IndicatorColor = indicatorColor;
         controller.Enabled = settings.Enabled;
 
         using var tray = new TrayIcon(
             enabled: settings.Enabled,
             autoStart: AutoStart.IsEnabled(),
             idleSeconds: settings.IdleSeconds,
+            indicatorColor: indicatorColor,
             onEnabledChanged: enabled =>
             {
                 controller.Enabled = enabled;
@@ -41,6 +46,12 @@ internal static class Program
             {
                 controller.IdleSeconds = seconds;
                 settings.IdleSeconds = seconds;
+                settings.Save();
+            },
+            onColorChanged: color =>
+            {
+                controller.IndicatorColor = color;
+                settings.IndicatorColorArgb = color.ToArgb();
                 settings.Save();
             },
             onExit: Application.Exit);

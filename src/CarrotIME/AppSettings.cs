@@ -16,6 +16,9 @@ internal sealed class AppSettings
     // 입력 후 인디케이터가 다시 표시되기까지의 유휴 시간(초).
     public int IdleSeconds { get; set; } = 20;
 
+    // 인디케이터(캐럿 옆 원) 배경색 ARGB.
+    public int IndicatorColorArgb { get; set; } = Ui.IndicatorPalette.Default.ToArgb();
+
     private static string Dir => System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CarrotIME");
 
@@ -42,6 +45,10 @@ internal sealed class AppSettings
                         if (int.TryParse(kv[1].Trim(), out int sec) && sec > 0)
                             settings.IdleSeconds = sec;
                         break;
+                    case "IndicatorColorArgb":
+                        if (int.TryParse(kv[1].Trim(), out int argb))
+                            settings.IndicatorColorArgb = argb;
+                        break;
                 }
             }
         }
@@ -58,7 +65,8 @@ internal sealed class AppSettings
         {
             Directory.CreateDirectory(Dir);
             File.WriteAllText(FilePath,
-                $"Enabled={(Enabled ? 1 : 0)}\nAutoStart={(AutoStart ? 1 : 0)}\nIdleSeconds={IdleSeconds}\n");
+                $"Enabled={(Enabled ? 1 : 0)}\nAutoStart={(AutoStart ? 1 : 0)}\n" +
+                $"IdleSeconds={IdleSeconds}\nIndicatorColorArgb={IndicatorColorArgb}\n");
         }
         catch
         {

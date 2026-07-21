@@ -15,7 +15,7 @@ internal sealed class TrayIcon : IDisposable
 {
     private static readonly Color CarrotBody = Color.FromArgb(237, 106, 44);   // 주황 몸통
     private static readonly Color CarrotLeaf = Color.FromArgb(76, 175, 80);    // 초록 잎
-    private static readonly Color GlyphColor = Color.FromArgb(51, 51, 51);     // 진한 회색 글자
+    private static readonly Color GlyphColor = Color.White;                    // 흰색 글자
     private const int IconSize = 32; // 고DPI에서도 글자가 또렷하도록 크게 그려 Windows가 축소
 
     private readonly NotifyIcon _icon;
@@ -29,9 +29,9 @@ internal sealed class TrayIcon : IDisposable
     private static readonly int[] IdlePresets = { 5, 10, 20, 30, 60, 180 };
 
     public TrayIcon(
-        bool enabled, bool autoStart, int idleSeconds,
+        bool enabled, bool autoStart, int idleSeconds, Color indicatorColor,
         Action<bool> onEnabledChanged, Func<bool, bool> onAutoStartChanged,
-        Action<int> onIdleSecondsChanged, Action onExit)
+        Action<int> onIdleSecondsChanged, Action<Color> onColorChanged, Action onExit)
     {
         // 체크 = 일시정지 상태(=꺼짐). CheckOnClick으로 Click 전에 Checked가 갱신됨.
         _pauseItem = new ToolStripMenuItem("일시정지") { Checked = !enabled, CheckOnClick = true };
@@ -54,6 +54,24 @@ internal sealed class TrayIcon : IDisposable
             idleMenu.DropDownItems.Add(item);
         }
 
+        var colorMenu = new ToolStripMenuItem("인디케이터 색상");
+        foreach (var (name, color) in IndicatorPalette.Swatches)
+        {
+            var item = new ToolStripMenuItem(name)
+            {
+                Image = Swatch(color),
+                Checked = color.ToArgb() == indicatorColor.ToArgb(),
+                Tag = color
+            };
+            item.Click += (_, _) =>
+            {
+                onColorChanged(color);
+                foreach (ToolStripMenuItem mi in colorMenu.DropDownItems)
+                    mi.Checked = ((Color)mi.Tag!).ToArgb() == color.ToArgb(); // 라디오처럼 하나만
+            };
+            colorMenu.DropDownItems.Add(item);
+        }
+
         var exitItem = new ToolStripMenuItem("종료");
         exitItem.Click += (_, _) => onExit();
 
@@ -61,6 +79,7 @@ internal sealed class TrayIcon : IDisposable
         menu.Items.Add(_pauseItem);
         menu.Items.Add(_autoStartItem);
         menu.Items.Add(idleMenu);
+        menu.Items.Add(colorMenu);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(exitItem);
 
@@ -74,6 +93,17 @@ internal sealed class TrayIcon : IDisposable
     }
 
     private static string FormatSeconds(int sec) => sec % 60 == 0 ? $"{sec / 60}분" : $"{sec}초";
+
+    // 메뉴에 표시할 색상 견본(작은 원). 앱 수명 동안 유지되므로 별도 dispose 안 함.
+    private static Bitmap Swatch(Color color)
+    {
+        var bmp = new Bitmap(16, 16);
+        using var g = Graphics.FromImage(bmp);
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        using var brush = new SolidBrush(color);
+        g.FillEllipse(brush, 1, 1, 13, 13);
+        return bmp;
+    }
 
     /// <summary>현재 입력 상태 글자(한/영/あ 등)를 트레이 아이콘에 반영한다. 바뀔 때만 다시 그린다.</summary>
     public void SetGlyph(string glyph)
