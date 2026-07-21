@@ -12,10 +12,36 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <RootNamespace>ImeCaretIndicator</RootNamespace>
     <AssemblyName>ImeCaretIndicator</AssemblyName>
+    <!-- AssemblyVersion는 고정, FileVersion/InformationalVersion만 빌드마다 증가 -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ImeCaretIndicator.Core\ImeCaretIndicator.Core.csproj" />
   </ItemGroup>
+
+  <!--
+    빌드할 때마다 build.counter를 1 증가시켜 FileVersion/InformationalVersion에 반영한다.
+    (build.counter는 gitignore — 로컬 빌드 번호이므로 커밋하지 않음)
+    AssemblyVersion은 고정이라 참조가 흔들리지 않는다.
+  -->
+  <Target Name="AutoIncrementBuildNumber" BeforeTargets="GetAssemblyVersion">
+    <PropertyGroup>
+      <_BuildCounterFile>$(MSBuildProjectDirectory)\build.counter</_BuildCounterFile>
+    </PropertyGroup>
+    <ReadLinesFromFile File="$(_BuildCounterFile)" Condition="Exists('$(_BuildCounterFile)')">
+      <Output TaskParameter="Lines" ItemName="_CounterLines" />
+    </ReadLinesFromFile>
+    <PropertyGroup>
+      <_BuildCounter>@(_CounterLines)</_BuildCounter>
+      <_BuildCounter Condition="'$(_BuildCounter)' == ''">0</_BuildCounter>
+      <_BuildCounter>$([MSBuild]::Add($(_BuildCounter), 1))</_BuildCounter>
+      <FileVersion>1.0.0.$(_BuildCounter)</FileVersion>
+      <InformationalVersion>1.0.0.$(_BuildCounter)</InformationalVersion>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_BuildCounterFile)" Lines="$(_BuildCounter)" Overwrite="true" />
+    <Message Importance="high" Text="ImeCaretIndicator build #$(_BuildCounter) → FileVersion 1.0.0.$(_BuildCounter)" />
+  </Target>
 
 </Project>
