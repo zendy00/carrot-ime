@@ -44,11 +44,11 @@ public static class Decider
         }
     }
 
-    /// <summary>입력 상태에 대응하는 인디케이터 라벨. OtherIme는 언어별 글자로.</summary>
+    /// <summary>입력 상태에 대응하는 오버레이(캐럿 옆) 라벨. 한글=한, 영문=A. OtherIme는 언어별 글자.</summary>
     public static string Label(InputState state, ushort keyboardLangId = 0) => state switch
     {
         InputState.Hangul => "한",
-        InputState.English => "영",
+        InputState.English => "A",
         InputState.OtherIme => OtherImeLabel(keyboardLangId),
         _ => "IME"
     };

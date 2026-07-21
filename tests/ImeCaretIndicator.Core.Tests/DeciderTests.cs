@@ -47,7 +47,7 @@ public class DeciderTests
     public void Hangul_label_is_han() => Assert.Equal("한", Decider.Label(InputState.Hangul));
 
     [Fact]
-    public void English_label_is_yeong() => Assert.Equal("영", Decider.Label(InputState.English));
+    public void English_label_is_A() => Assert.Equal("A", Decider.Label(InputState.English));
 
     // ---- Ticket 05: 기타 IME (일본어·중국어 등) ----
 
