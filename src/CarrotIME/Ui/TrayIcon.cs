@@ -34,14 +34,14 @@ internal sealed class TrayIcon : IDisposable
         Action<int> onIdleSecondsChanged, Action<Color> onColorChanged, Action onExit)
     {
         // 체크 = 일시정지 상태(=꺼짐). CheckOnClick으로 Click 전에 Checked가 갱신됨.
-        _pauseItem = new ToolStripMenuItem("일시정지") { Checked = !enabled, CheckOnClick = true };
+        _pauseItem = new ToolStripMenuItem("Pause") { Checked = !enabled, CheckOnClick = true };
         _pauseItem.Click += (_, _) => onEnabledChanged(!_pauseItem.Checked);
 
-        _autoStartItem = new ToolStripMenuItem("Windows 시작 시 실행") { Checked = autoStart, CheckOnClick = true };
+        _autoStartItem = new ToolStripMenuItem("Run at startup") { Checked = autoStart, CheckOnClick = true };
         // 콜백이 실제 적용 결과(성공 여부)를 돌려주면 체크를 현실과 맞춘다.
         _autoStartItem.Click += (_, _) => _autoStartItem.Checked = onAutoStartChanged(_autoStartItem.Checked);
 
-        var idleMenu = new ToolStripMenuItem("표시 지연 시간");
+        var idleMenu = new ToolStripMenuItem("Reappear delay");
         foreach (int sec in IdlePresets)
         {
             var item = new ToolStripMenuItem(FormatSeconds(sec)) { Checked = sec == idleSeconds, Tag = sec };
@@ -54,7 +54,7 @@ internal sealed class TrayIcon : IDisposable
             idleMenu.DropDownItems.Add(item);
         }
 
-        var colorMenu = new ToolStripMenuItem("인디케이터 색상");
+        var colorMenu = new ToolStripMenuItem("Indicator color");
         foreach (var (name, color) in IndicatorPalette.Swatches)
         {
             var item = new ToolStripMenuItem(name)
@@ -72,7 +72,7 @@ internal sealed class TrayIcon : IDisposable
             colorMenu.DropDownItems.Add(item);
         }
 
-        var exitItem = new ToolStripMenuItem("종료");
+        var exitItem = new ToolStripMenuItem("Exit");
         exitItem.Click += (_, _) => onExit();
 
         var menu = new ContextMenuStrip();
@@ -86,13 +86,13 @@ internal sealed class TrayIcon : IDisposable
         _icon = new NotifyIcon
         {
             Icon = CreateGlyphIcon(string.Empty),
-            Text = "CarrotIME — 입력 상태 표시기",
+            Text = "CarrotIME — input state indicator",
             Visible = true,
             ContextMenuStrip = menu
         };
     }
 
-    private static string FormatSeconds(int sec) => sec % 60 == 0 ? $"{sec / 60}분" : $"{sec}초";
+    private static string FormatSeconds(int sec) => sec % 60 == 0 ? $"{sec / 60}m" : $"{sec}s";
 
     // 메뉴에 표시할 색상 견본(작은 원). 앱 수명 동안 유지되므로 별도 dispose 안 함.
     private static Bitmap Swatch(Color color)
