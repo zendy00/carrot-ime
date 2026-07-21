@@ -69,6 +69,22 @@ public class DeciderTests
     public void Unknown_ime_label_falls_back_to_IME()
         => Assert.Equal("IME", Decider.Label(InputState.OtherIme, 0x0439)); // 그 외 언어(예: 힌디)
 
+    // ---- 트레이 라벨: 한글=가, 영문=A (오버레이의 한/영과 별개) ----
+
+    [Fact]
+    public void Tray_label_for_hangul_is_ga() => Assert.Equal("가", Decider.TrayLabel(InputState.Hangul, Ko));
+
+    [Fact]
+    public void Tray_label_for_english_is_A() => Assert.Equal("A", Decider.TrayLabel(InputState.English, En));
+
+    [Fact]
+    public void Tray_label_for_other_ime_matches_overlay_glyph()
+    {
+        Assert.Equal("あ", Decider.TrayLabel(InputState.OtherIme, Ja));
+        Assert.Equal("中", Decider.TrayLabel(InputState.OtherIme, Zh));
+        Assert.Equal("IME", Decider.TrayLabel(InputState.OtherIme, 0x0439));
+    }
+
     // ---- 위치 · 표시 여부 ----
 
     [Fact]

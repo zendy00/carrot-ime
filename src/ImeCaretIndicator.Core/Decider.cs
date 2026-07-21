@@ -61,6 +61,18 @@ public static class Decider
         _ => "IME"
     };
 
+    /// <summary>
+    /// 트레이 아이콘용 라벨. 오버레이(한/영)와 달리 한글=가, 영문=A로 표시한다.
+    /// 기타 IME는 오버레이와 동일한 언어 글자.
+    /// </summary>
+    public static string TrayLabel(InputState state, ushort keyboardLangId = 0) => state switch
+    {
+        InputState.Hangul => "가",
+        InputState.English => "A",
+        InputState.OtherIme => OtherImeLabel(keyboardLangId),
+        _ => "IME"
+    };
+
     /// <summary>스냅샷 하나를 받아 인디케이터를 어떻게 그릴지 결정한다.</summary>
     /// <param name="idleReappearMs">입력 후 다시 표시되기까지의 유휴 시간(ms). 사용자 설정값.</param>
     public static IndicatorView Decide(InputSnapshot s, long idleReappearMs = DefaultIdleReappearMs)

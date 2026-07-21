@@ -95,12 +95,12 @@ internal sealed class IndicatorController : IDisposable
         else
             _overlay.HideIndicator();
 
-        // 트레이 아이콘은 debounce와 무관하게 현재 입력 상태 글자를 반영한다.
+        // 트레이 아이콘은 debounce와 무관하게 현재 입력 상태 글자(가/A/あ 등)를 반영한다.
         // (langId==0은 포그라운드 창이 없는 경우 → 갱신 생략)
         if (snapshot.KeyboardLangId != 0)
         {
             var state = Decider.ResolveState(snapshot.KeyboardLangId, snapshot.ConversionMode);
-            StateChanged?.Invoke(Decider.Label(state, snapshot.KeyboardLangId));
+            StateChanged?.Invoke(Decider.TrayLabel(state, snapshot.KeyboardLangId));
         }
 
         // 편집 필드에 있는 동안엔(입력 중 숨김 상태여도) 폴링 유지 — 입력 활동/약 20초 유휴를
