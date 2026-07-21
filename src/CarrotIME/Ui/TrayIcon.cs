@@ -13,7 +13,9 @@ namespace CarrotIME.Ui;
 /// </summary>
 internal sealed class TrayIcon : IDisposable
 {
-    private static readonly Color CircleColor = Color.FromArgb(0, 122, 255);
+    private static readonly Color CarrotBody = Color.FromArgb(237, 106, 44);   // 주황 몸통
+    private static readonly Color CarrotLeaf = Color.FromArgb(76, 175, 80);    // 초록 잎
+    private static readonly Color GlyphColor = Color.FromArgb(51, 51, 51);     // 진한 회색 글자
     private const int IconSize = 32; // 고DPI에서도 글자가 또렷하도록 크게 그려 Windows가 축소
 
     private readonly NotifyIcon _icon;
@@ -86,7 +88,7 @@ internal sealed class TrayIcon : IDisposable
             Win32.DestroyIcon(previous);      // 이전 GetHicon 핸들 정리
     }
 
-    // 파란 원 + 흰 글자로 트레이 아이콘을 런타임 생성(별도 .ico 리소스 불필요).
+    // 당근(주황 몸통+초록 잎) + 진한 회색 글자로 트레이 아이콘을 런타임 생성.
     private Icon CreateGlyphIcon(string glyph)
     {
         using var bmp = new Bitmap(IconSize, IconSize);
@@ -95,22 +97,39 @@ internal sealed class TrayIcon : IDisposable
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = TextRenderingHint.AntiAlias;
             g.Clear(Color.Transparent);
-            using var brush = new SolidBrush(CircleColor);
-            g.FillEllipse(brush, 1, 1, IconSize - 2, IconSize - 2);
+            DrawCarrot(g);
 
             if (glyph.Length > 0)
             {
-                using var text = new SolidBrush(Color.White);
+                using var text = new SolidBrush(GlyphColor);
                 using var fmt = new StringFormat
                 {
                     Alignment = StringAlignment.Center,
                     LineAlignment = StringAlignment.Center
                 };
-                g.DrawString(glyph, _iconFont, text, new RectangleF(0, 0, IconSize, IconSize), fmt);
+                // 글자는 당근 몸통의 넓은 윗부분에 얹는다.
+                g.DrawString(glyph, _iconFont, text, new RectangleF(0, 7, IconSize, 18), fmt);
             }
         }
         _hIcon = bmp.GetHicon();
         return Icon.FromHandle(_hIcon);
+    }
+
+    // 32x32 기준 당근: 위에 초록 잎, 아래로 뾰족한 주황 몸통.
+    private static void DrawCarrot(Graphics g)
+    {
+        using var leaf = new SolidBrush(CarrotLeaf);
+        g.FillEllipse(leaf, 14, 0, 4, 9);   // 가운데 잎
+        g.FillEllipse(leaf, 9, 2, 4, 8);    // 왼쪽 잎
+        g.FillEllipse(leaf, 19, 2, 4, 8);   // 오른쪽 잎
+
+        using var body = new SolidBrush(CarrotBody);
+        var cone = new[]
+        {
+            new Point(6, 11), new Point(26, 11), new Point(16, 31)
+        };
+        g.FillPolygon(body, cone);
+        g.FillEllipse(body, 6, 6, 20, 12);  // 둥근 윗부분
     }
 
     public void Dispose()
