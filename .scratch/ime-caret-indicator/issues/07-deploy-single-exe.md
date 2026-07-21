@@ -14,9 +14,9 @@
 ## 배포 방법
 
 ```
-dotnet publish src/ImeCaretIndicator/ImeCaretIndicator.csproj -p:PublishProfile=win-x64
+dotnet publish src/CarrotIME/CarrotIME.csproj -p:PublishProfile=win-x64
 ```
-→ `src/ImeCaretIndicator/bin/publish/ImeCaretIndicator.exe` (단일 파일, self-contained, 약 76MB).
+→ `src/CarrotIME/bin/publish/CarrotIME.exe` (단일 파일, self-contained, 약 76MB).
 .NET 런타임 미설치 PC에서도 실행. 실행 시 UAC 승인 필요(관리자 권한 매니페스트 내장).
 
 - self-contained 단일 exe, 트리밍 없음(WinForms/UIA 반사 안전), NativeAOT 미사용(WinForms 미지원).

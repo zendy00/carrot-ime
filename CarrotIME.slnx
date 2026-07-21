@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CarrotIME.Core/CarrotIME.Core.csproj" />
+    <Project Path="src/CarrotIME/CarrotIME.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CarrotIME.Core.Tests/CarrotIME.Core.Tests.csproj" />
+  </Folder>
+</Solution>

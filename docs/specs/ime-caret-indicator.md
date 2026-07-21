@@ -1,5 +1,5 @@
 ---
-title: IME 상태 표시기 (IME Caret Indicator)
+title: CarrotIME — 입력 상태 표시기 (IME Caret Indicator)
 labels: [ready-for-agent]
 tracker: local-markdown (트래커 미설정 → 폴백)
 created: 2026-07-20

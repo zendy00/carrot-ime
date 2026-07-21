@@ -1,9 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="src/ImeCaretIndicator.Core/ImeCaretIndicator.Core.csproj" />
-    <Project Path="src/ImeCaretIndicator/ImeCaretIndicator.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/ImeCaretIndicator.Core.Tests/ImeCaretIndicator.Core.Tests.csproj" />
-  </Folder>
-</Solution>

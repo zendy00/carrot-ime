@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>carrot.ico</ApplicationIcon>
+    <RootNamespace>CarrotIME</RootNamespace>
+    <AssemblyName>CarrotIME</AssemblyName>
+    <!-- AssemblyVersion는 고정, FileVersion/InformationalVersion만 빌드마다 증가 -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CarrotIME.Core\CarrotIME.Core.csproj" />
+  </ItemGroup>
+
+  <!--
+    빌드할 때마다 build.counter를 1 증가시켜 FileVersion/InformationalVersion에 반영한다.
+    (build.counter는 gitignore — 로컬 빌드 번호이므로 커밋하지 않음)
+    AssemblyVersion은 고정이라 참조가 흔들리지 않는다.
+  -->
+  <Target Name="AutoIncrementBuildNumber" BeforeTargets="GetAssemblyVersion">
+    <PropertyGroup>
+      <_BuildCounterFile>$(MSBuildProjectDirectory)\build.counter</_BuildCounterFile>
+    </PropertyGroup>
+    <ReadLinesFromFile File="$(_BuildCounterFile)" Condition="Exists('$(_BuildCounterFile)')">
+      <Output TaskParameter="Lines" ItemName="_CounterLines" />
+    </ReadLinesFromFile>
+    <PropertyGroup>
+      <_BuildCounter>@(_CounterLines)</_BuildCounter>
+      <_BuildCounter Condition="'$(_BuildCounter)' == ''">0</_BuildCounter>
+      <_BuildCounter>$([MSBuild]::Add($(_BuildCounter), 1))</_BuildCounter>
+      <FileVersion>1.0.0.$(_BuildCounter)</FileVersion>
+      <InformationalVersion>1.0.0.$(_BuildCounter)</InformationalVersion>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_BuildCounterFile)" Lines="$(_BuildCounter)" Overwrite="true" />
+    <Message Importance="high" Text="CarrotIME build #$(_BuildCounter) → FileVersion 1.0.0.$(_BuildCounter)" />
+  </Target>
+
+  <!-- 게시 후 exe 파일명에 버전을 붙인다: CarrotIME-1.0.0.N.exe -->
+  <Target Name="AppendVersionToPublishedExe" AfterTargets="Publish">
+    <PropertyGroup>
+      <_PublishedExe>$(PublishDir)$(AssemblyName).exe</_PublishedExe>
+      <_VersionedExe>$(PublishDir)$(AssemblyName)-$(FileVersion).exe</_VersionedExe>
+    </PropertyGroup>
+    <Move SourceFiles="$(_PublishedExe)" DestinationFiles="$(_VersionedExe)"
+          Condition="Exists('$(_PublishedExe)')" />
+    <Message Importance="high" Text="Published: $(_VersionedExe)" />
+  </Target>
+
+</Project>
