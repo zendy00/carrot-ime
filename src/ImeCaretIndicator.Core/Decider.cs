@@ -20,6 +20,9 @@ public static class Decider
     // 캐럿과 인디케이터 사이 간격 — 방금 친 글자를 가리지 않도록.
     private const int CaretGapX = 4;
 
+    // 이보다 넓은 캐럿 사각형은 얇은 텍스트 캐럿이 아니라 입력창 박스/선택 영역으로 본다(px).
+    private const int CaretWidthThreshold = 6;
+
     // 고정 폴백 위치(활성 창 우상단)의 안쪽 여백.
     private const int FallbackMargin = 6;
 
@@ -88,12 +91,21 @@ public static class Decider
         if (s.MillisSinceInputActivity < idleReappearMs)
             return IndicatorView.Hidden;
 
-        // 캐럿을 얻으면 캐럿 오른쪽에, 못 얻으면(크롬 등) 활성 창 우상단에 폴백(Ticket 04).
+        // 캐럿을 얻으면 캐럿 옆에, 못 얻으면(크롬 등) 활성 창 우상단에 폴백(Ticket 04).
         Point desired = s.Caret is Rectangle caret
-            ? new Point(caret.Right + CaretGapX, caret.Top)
+            ? CaretAnchor(caret)
             : FallbackTopRight(s.ActiveWindowBounds, s.IndicatorSize);
 
         return new IndicatorView(true, label, ClampToScreen(desired, s.IndicatorSize, s.ScreenBounds));
+    }
+
+    // 얇은 캐럿이면 오른쪽에 붙여 방금 친 글자를 안 가린다. 넓은 사각형(일부 웹 입력창은
+    // UIA가 캐럿 대신 입력창 박스 전체를 준다)은 오른쪽 끝이 박스 바깥이라, 시작(왼쪽)을 기준으로
+    // 삼아 인디케이터가 박스 밖으로 나가지 않게 한다.
+    private static Point CaretAnchor(Rectangle caret)
+    {
+        int x = caret.Width > CaretWidthThreshold ? caret.Left : caret.Right + CaretGapX;
+        return new Point(x, caret.Top);
     }
 
     // 활성 창 우상단 안쪽.

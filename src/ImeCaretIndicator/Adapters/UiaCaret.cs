@@ -9,9 +9,6 @@ namespace ImeCaretIndicator.Adapters;
 /// </summary>
 internal static class UiaCaret
 {
-    // 이보다 넓은 사각형은 얇은 텍스트 캐럿이 아니라 입력창/선택 영역으로 본다(px).
-    private const int CaretWidthThreshold = 6;
-
     // threadId는 델리게이트 시그니처 통일용 — UIA는 전역 FocusedElement를 쓴다.
     public static Rectangle? TryGet(uint threadId)
     {
@@ -33,17 +30,14 @@ internal static class UiaCaret
             if (rects.Length == 0)
                 return null;
 
+            // 원시 사각형만 반환한다. "넓은 사각형은 실제 캐럿이 아니다"라는 판정·보정은
+            // 순수 코어(Decider)에서 하도록 넘긴다(테스트 가능한 위치 결정 seam 유지).
             System.Windows.Rect r = rects[0]; // 화면 좌표(double)
-            int width = Math.Max(1, (int)r.Width);
-            int height = Math.Max(1, (int)r.Height);
-
-            // 얇은 캐럿(폭 몇 px)이면 그대로. 넓으면(사이트에 따라 입력창 박스/선택 영역을
-            // 통째로 주는 경우 — 예: 일부 웹 검색창) 실제 캐럿이 아니므로, 오른쪽 끝이 아니라
-            // 시작(왼쪽)을 캐럿으로 간주해 인디케이터가 박스 바깥으로 나가지 않게 한다.
-            if (width > CaretWidthThreshold)
-                width = 1;
-
-            return new Rectangle((int)r.X, (int)r.Y, width, height);
+            return new Rectangle(
+                (int)r.X,
+                (int)r.Y,
+                Math.Max(1, (int)r.Width),
+                Math.Max(1, (int)r.Height));
         }
         catch
         {
