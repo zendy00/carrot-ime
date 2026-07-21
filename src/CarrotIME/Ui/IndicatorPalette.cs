@@ -18,5 +18,14 @@ internal static class IndicatorPalette
         ("Teal", Color.FromArgb(95, 182, 188)),
     };
 
-    public static Color Default => Swatches[0].Color;
+    // 기본색: 코랄
+    public static Color Default => ColorByName("Coral");
+
+    private static Color ColorByName(string name)
+    {
+        foreach (var (n, c) in Swatches)
+            if (n == name)
+                return c;
+        return Swatches[0].Color;
+    }
 }
