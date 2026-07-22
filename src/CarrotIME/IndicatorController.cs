@@ -47,6 +47,12 @@ internal sealed class IndicatorController : IDisposable
         set => _overlay.SetColor(value);
     }
 
+    /// <summary>인디케이터 글자색. 사용자 설정.</summary>
+    public Color IndicatorTextColor
+    {
+        set => _overlay.SetTextColor(value);
+    }
+
     /// <summary>현재 입력 상태 글자(한/영/あ 등)를 알린다. 트레이 아이콘 갱신용.</summary>
     public Action<string>? StateChanged { get; set; }
 

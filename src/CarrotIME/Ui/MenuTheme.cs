@@ -30,6 +30,9 @@ internal static class MenuTheme
         foreach (ToolStripItem item in items)
         {
             item.ForeColor = dark ? DarkText : SystemColors.MenuText;
+            // 텍스트박스(직접 입력)는 기본 흰 배경이라 다크에선 배경도 어둡게 바꿔야 글자가 보인다.
+            if (item is ToolStripTextBox box)
+                box.BackColor = dark ? Color.FromArgb(62, 62, 64) : SystemColors.Window;
             if (item is ToolStripMenuItem mi && mi.HasDropDownItems)
             {
                 mi.DropDown.BackColor = dark ? DarkBg : SystemColors.Menu;

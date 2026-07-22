@@ -17,10 +17,12 @@ internal static class Program
         AppSettings settings = AppSettings.Load();
 
         Color indicatorColor = Color.FromArgb(settings.IndicatorColorArgb);
+        Color textColor = Color.FromArgb(settings.IndicatorTextColorArgb);
 
         using var controller = new IndicatorController();
         controller.IdleSeconds = settings.IdleSeconds;
         controller.IndicatorColor = indicatorColor;
+        controller.IndicatorTextColor = textColor;
         controller.Enabled = settings.Enabled;
 
         using var tray = new TrayIcon(
@@ -28,6 +30,7 @@ internal static class Program
             autoStart: AutoStart.IsEnabled(),
             idleSeconds: settings.IdleSeconds,
             indicatorColor: indicatorColor,
+            textColor: textColor,
             onEnabledChanged: enabled =>
             {
                 controller.Enabled = enabled;
@@ -52,6 +55,12 @@ internal static class Program
             {
                 controller.IndicatorColor = color;
                 settings.IndicatorColorArgb = color.ToArgb();
+                settings.Save();
+            },
+            onTextColorChanged: color =>
+            {
+                controller.IndicatorTextColor = color;
+                settings.IndicatorTextColorArgb = color.ToArgb();
                 settings.Save();
             },
             onExit: Application.Exit);

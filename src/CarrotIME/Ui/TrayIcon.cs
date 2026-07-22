@@ -21,17 +21,23 @@ internal sealed class TrayIcon : IDisposable
     private readonly NotifyIcon _icon;
     private readonly ToolStripMenuItem _pauseItem;
     private readonly ToolStripMenuItem _autoStartItem;
+    private readonly ToolStripMenuItem _idleMenu;
+    private readonly ToolStripTextBox _customIdleBox;
     private readonly Font _iconFont = new("Segoe UI", 15f, FontStyle.Bold, GraphicsUnit.Pixel);
     private IntPtr _hIcon;
     private string _glyph = string.Empty;
 
-    // 표시 지연 시간 프리셋(초).
-    private static readonly int[] IdlePresets = { 5, 10, 20, 30, 60, 180 };
+    // 표시 지연 시간 프리셋(초). 0 = 항상 표시.
+    private static readonly int[] IdlePresets = { 0, 1, 2, 3, 5, 10, 30 };
+
+    // 직접 입력 상한(초). 600 이상을 입력하면 이 값으로 잘라 적용한다.
+    private const int MaxIdleSeconds = 599;
 
     public TrayIcon(
-        bool enabled, bool autoStart, int idleSeconds, Color indicatorColor,
+        bool enabled, bool autoStart, int idleSeconds, Color indicatorColor, Color textColor,
         Action<bool> onEnabledChanged, Func<bool, bool> onAutoStartChanged,
-        Action<int> onIdleSecondsChanged, Action<Color> onColorChanged, Action onExit)
+        Action<int> onIdleSecondsChanged, Action<Color> onColorChanged,
+        Action<Color> onTextColorChanged, Action onExit)
     {
         // 체크 = 일시정지 상태(=꺼짐). CheckOnClick으로 Click 전에 Checked가 갱신됨.
         _pauseItem = new ToolStripMenuItem("Pause") { Checked = !enabled, CheckOnClick = true };
@@ -41,45 +47,53 @@ internal sealed class TrayIcon : IDisposable
         // 콜백이 실제 적용 결과(성공 여부)를 돌려주면 체크를 현실과 맞춘다.
         _autoStartItem.Click += (_, _) => _autoStartItem.Checked = onAutoStartChanged(_autoStartItem.Checked);
 
-        var idleMenu = new ToolStripMenuItem("Reappear delay");
+        var menu = new ContextMenuStrip();
+
+        _idleMenu = new ToolStripMenuItem("Reappear delay");
         foreach (int sec in IdlePresets)
         {
-            var item = new ToolStripMenuItem(FormatSeconds(sec)) { Checked = sec == idleSeconds, Tag = sec };
+            var item = new ToolStripMenuItem(FormatSeconds(sec)) { Tag = sec };
             item.Click += (_, _) =>
             {
                 onIdleSecondsChanged(sec);
-                foreach (ToolStripMenuItem mi in idleMenu.DropDownItems)
-                    mi.Checked = (int)mi.Tag! == sec; // 라디오처럼 하나만 체크
+                UpdateIdleChecks(sec);
             };
-            idleMenu.DropDownItems.Add(item);
+            _idleMenu.DropDownItems.Add(item);
         }
-
-        var colorMenu = new ToolStripMenuItem("Indicator color");
-        foreach (var (name, color) in IndicatorPalette.Swatches)
+        // 프리셋 밖 값은 메뉴 안 텍스트박스로 직접 입력(숫자만, 최대 599초) — 별도 팝업 없음.
+        // Enter로 적용. 저장된 값이 프리셋에 없으면 이 박스에 현재값이 표시된다.
+        _customIdleBox = new ToolStripTextBox { MaxLength = 3, TextBoxTextAlign = HorizontalAlignment.Right };
+        _customIdleBox.TextBox.PlaceholderText = "Custom (s)";
+        _customIdleBox.KeyPress += (_, e) =>
+            e.Handled = !char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar); // 숫자만 허용
+        _customIdleBox.KeyDown += (_, e) =>
         {
-            var item = new ToolStripMenuItem(name)
+            if (e.KeyCode != Keys.Enter)
+                return;
+            e.SuppressKeyPress = true; // 엔터 알림음 방지
+            if (int.TryParse(_customIdleBox.Text, out int sec))
             {
-                Image = Swatch(color),
-                Checked = color.ToArgb() == indicatorColor.ToArgb(),
-                Tag = color
-            };
-            item.Click += (_, _) =>
-            {
-                onColorChanged(color);
-                foreach (ToolStripMenuItem mi in colorMenu.DropDownItems)
-                    mi.Checked = ((Color)mi.Tag!).ToArgb() == color.ToArgb(); // 라디오처럼 하나만
-            };
-            colorMenu.DropDownItems.Add(item);
-        }
+                sec = Math.Min(sec, MaxIdleSeconds); // 600 이상은 599로 잘라 적용
+                onIdleSecondsChanged(sec);
+                UpdateIdleChecks(sec);
+            }
+            menu.Close();
+        };
+        _idleMenu.DropDownItems.Add(new ToolStripSeparator());
+        _idleMenu.DropDownItems.Add(_customIdleBox);
+        UpdateIdleChecks(idleSeconds);
+
+        var colorMenu = BuildColorMenu("Indicator color", IndicatorPalette.Swatches, indicatorColor, onColorChanged);
+        var textColorMenu = BuildColorMenu("Text color", IndicatorPalette.TextSwatches, textColor, onTextColorChanged);
 
         var exitItem = new ToolStripMenuItem("Exit");
         exitItem.Click += (_, _) => onExit();
 
-        var menu = new ContextMenuStrip();
         menu.Items.Add(_pauseItem);
         menu.Items.Add(_autoStartItem);
-        menu.Items.Add(idleMenu);
+        menu.Items.Add(_idleMenu);
         menu.Items.Add(colorMenu);
+        menu.Items.Add(textColorMenu);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(exitItem);
 
@@ -95,7 +109,68 @@ internal sealed class TrayIcon : IDisposable
         };
     }
 
-    private static string FormatSeconds(int sec) => sec % 60 == 0 ? $"{sec / 60}m" : $"{sec}s";
+    private static string FormatSeconds(int sec) =>
+        sec == 0 ? "Always" : sec % 60 == 0 ? $"{sec / 60}m" : $"{sec}s";
+
+    // 프리셋은 라디오처럼 하나만 체크. 프리셋 밖 값이면 텍스트박스에 현재값을 표시한다.
+    private void UpdateIdleChecks(int sec)
+    {
+        foreach (var mi in _idleMenu.DropDownItems.OfType<ToolStripMenuItem>())
+            if (mi.Tag is int preset)
+                mi.Checked = preset == sec;
+        bool isPreset = Array.IndexOf(IdlePresets, sec) >= 0;
+        _customIdleBox.Text = isPreset ? string.Empty : sec.ToString();
+    }
+
+    // 색 선택 서브메뉴: 팔레트(라디오처럼 하나만 체크) + 구분선 + Custom…(표준 컬러 피커).
+    // 팔레트 밖 색이면 Custom 항목에 견본을 표시하고 체크한다.
+    private static ToolStripMenuItem BuildColorMenu(
+        string title, (string Name, Color Color)[] swatches, Color initial, Action<Color> onChanged)
+    {
+        var menu = new ToolStripMenuItem(title);
+        var custom = new ToolStripMenuItem("Custom…");
+        Color current = initial; // 컬러 피커를 다시 열 때 초기 색
+
+        void Update(Color color)
+        {
+            current = color;
+            bool isPalette = false;
+            foreach (var mi in menu.DropDownItems.OfType<ToolStripMenuItem>())
+                if (mi.Tag is Color c)
+                {
+                    mi.Checked = c.ToArgb() == color.ToArgb();
+                    isPalette |= mi.Checked;
+                }
+            custom.Checked = !isPalette;
+            Image? previous = custom.Image;
+            custom.Image = isPalette ? null : Swatch(color);
+            previous?.Dispose();
+        }
+
+        foreach (var (name, color) in swatches)
+        {
+            var item = new ToolStripMenuItem(name) { Image = Swatch(color), Tag = color };
+            item.Click += (_, _) =>
+            {
+                onChanged(color);
+                Update(color);
+            };
+            menu.DropDownItems.Add(item);
+        }
+        custom.Click += (_, _) =>
+        {
+            using var dlg = new ColorDialog { Color = current, FullOpen = true };
+            if (dlg.ShowDialog() == DialogResult.OK)
+            {
+                onChanged(dlg.Color);
+                Update(dlg.Color);
+            }
+        };
+        menu.DropDownItems.Add(new ToolStripSeparator());
+        menu.DropDownItems.Add(custom);
+        Update(initial);
+        return menu;
+    }
 
     // 메뉴에 표시할 색상 견본(작은 원). 앱 수명 동안 유지되므로 별도 dispose 안 함.
     private static Bitmap Swatch(Color color)
@@ -105,6 +180,9 @@ internal sealed class TrayIcon : IDisposable
         g.SmoothingMode = SmoothingMode.AntiAlias;
         using var brush = new SolidBrush(color);
         g.FillEllipse(brush, 1, 1, 13, 13);
+        // 흰색 등 밝은 색이 메뉴 배경에 묻히지 않도록 회색 테두리
+        using var pen = new Pen(Color.FromArgb(128, 128, 128));
+        g.DrawEllipse(pen, 1, 1, 13, 13);
         return bmp;
     }
 

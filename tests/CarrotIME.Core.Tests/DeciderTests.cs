@@ -192,4 +192,12 @@ public class DeciderTests
         // 사용자가 10초로 설정하면 15초 유휴는 표시
         Assert.True(Decider.Decide(snap, idleReappearMs: 10_000).Visible);
     }
+
+    [Fact]
+    public void Zero_idle_threshold_always_shows_even_while_typing()
+    {
+        // 0초 = "항상 표시": 방금 입력 중이어도 편집 포커스면 표시
+        var snap = Snap(new Rectangle(100, 200, 2, 16), Ko, Native, millisSinceActivity: 0);
+        Assert.True(Decider.Decide(snap, idleReappearMs: 0).Visible);
+    }
 }

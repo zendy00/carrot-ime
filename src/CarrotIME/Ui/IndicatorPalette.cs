@@ -21,6 +21,19 @@ internal static class IndicatorPalette
     // 기본색: 코랄
     public static Color Default => ColorByName("Coral");
 
+    /// <summary>인디케이터 글자색으로 고를 수 있는 대표색 팔레트.</summary>
+    public static readonly (string Name, Color Color)[] TextSwatches =
+    {
+        ("White", Color.White),
+        ("Black", Color.Black),
+        ("Navy", Color.FromArgb(28, 44, 84)),
+        ("Yellow", Color.FromArgb(255, 220, 80)),
+        ("Red", Color.FromArgb(200, 60, 60)),
+    };
+
+    // 기본 글자색: 흰색
+    public static Color DefaultText => Color.White;
+
     private static Color ColorByName(string name)
     {
         foreach (var (n, c) in Swatches)

@@ -19,6 +19,9 @@ internal sealed class AppSettings
     // 인디케이터(캐럿 옆 원) 배경색 ARGB.
     public int IndicatorColorArgb { get; set; } = Ui.IndicatorPalette.Default.ToArgb();
 
+    // 인디케이터 글자색 ARGB.
+    public int IndicatorTextColorArgb { get; set; } = Ui.IndicatorPalette.DefaultText.ToArgb();
+
     private static string Dir => System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CarrotIME");
 
@@ -42,12 +45,17 @@ internal sealed class AppSettings
                     case "Enabled": settings.Enabled = kv[1].Trim() == "1"; break;
                     case "AutoStart": settings.AutoStart = kv[1].Trim() == "1"; break;
                     case "IdleSeconds":
-                        if (int.TryParse(kv[1].Trim(), out int sec) && sec > 0)
+                        // 0 = 항상 표시(유효한 선택값)
+                        if (int.TryParse(kv[1].Trim(), out int sec) && sec >= 0)
                             settings.IdleSeconds = sec;
                         break;
                     case "IndicatorColorArgb":
                         if (int.TryParse(kv[1].Trim(), out int argb))
                             settings.IndicatorColorArgb = argb;
+                        break;
+                    case "IndicatorTextColorArgb":
+                        if (int.TryParse(kv[1].Trim(), out int textArgb))
+                            settings.IndicatorTextColorArgb = textArgb;
                         break;
                 }
             }
@@ -66,7 +74,8 @@ internal sealed class AppSettings
             Directory.CreateDirectory(Dir);
             File.WriteAllText(FilePath,
                 $"Enabled={(Enabled ? 1 : 0)}\nAutoStart={(AutoStart ? 1 : 0)}\n" +
-                $"IdleSeconds={IdleSeconds}\nIndicatorColorArgb={IndicatorColorArgb}\n");
+                $"IdleSeconds={IdleSeconds}\nIndicatorColorArgb={IndicatorColorArgb}\n" +
+                $"IndicatorTextColorArgb={IndicatorTextColorArgb}\n");
         }
         catch
         {
