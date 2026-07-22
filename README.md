@@ -1,32 +1,32 @@
 # CarrotIME 🥕
 
-**English** | [한국어](docs/ko/README.md)
+**한국어** | [English](docs/en/README.md)
 
-Windows IME indicator — shows your current input source (한 / A) right next to the text caret.
+윈도우 IME 표시기 — 입력 캐럿 우측에 현재 입력기(한 / A)를 표시합니다.
 
-![CarrotIME indicator shown next to the caret](docs/images/screenshot.png)
+![캐럿 옆에 표시되는 CarrotIME 인디케이터](docs/images/screenshot.png)
 
-## About
+## 소개
 
-A Windows port of the macOS input source indicator. A small badge next to the text caret shows whether you are typing Korean, English, or another IME (Japanese, Chinese, …).
+macOS의 입력 소스 표시기를 윈도우에서 재현합니다. 지금 입력기가 한글인지 영문인지(일본어·중국어 등 기타 IME도)를 텍스트 캐럿 바로 옆 작은 원으로 알려줍니다.
 
-## Features
+## 기능
 
-- Shows the current input state next to the caret (한 / A / あ / 中).
-- Hides while you type, reappears after an idle delay — presets from Always (0s) to 30s, or type a custom value (up to 599s) right in the menu. Default 20s.
-- Indicator background and text colors — pastel palette plus a custom color picker.
-- Tray icon also reflects the current state (가 / A).
-- Tray menu: pause, reappear delay, indicator color, text color, run at startup, exit.
-- Menu follows the Windows dark theme.
+- 캐럿 옆에 현재 입력 상태 표시 (한 / A / あ / 中).
+- 입력 중에는 숨기고, 유휴하면 다시 표시 — 항상(0초)~30초 프리셋 또는 메뉴에서 바로 직접 입력(최대 599초). 기본 20초.
+- 인디케이터 배경색·글자색 — 파스텔 팔레트 + 컬러 피커로 자유 지정.
+- 트레이 아이콘에도 현재 상태 표시 (가 / A).
+- 트레이 메뉴: 일시정지, 표시 지연 시간, 배경색, 글자색, Windows 시작 시 실행, 종료.
+- 윈도우 다크 테마면 메뉴도 다크로 표시.
 
-Tray context menu:
+트레이 컨텍스트 메뉴:
 
-![CarrotIME tray context menu (dark)](docs/images/menu.png)
+![CarrotIME 트레이 컨텍스트 메뉴 (다크)](docs/images/menu.png)
 
-## Build
+## 빌드
 
 ```
 dotnet publish src/CarrotIME/CarrotIME.csproj -p:PublishProfile=win-x64
 ```
 
-→ `src/CarrotIME/bin/publish/CarrotIME-1.0.0.N.exe` — a self-contained single-file exe. It runs without a preinstalled .NET runtime and requires administrator (UAC) approval on launch.
+→ `src/CarrotIME/bin/publish/CarrotIME-1.0.0.N.exe` — self-contained 단일 실행 파일. .NET 런타임 미설치 PC에서도 실행되며, 실행 시 관리자 권한(UAC) 승인이 필요합니다.
