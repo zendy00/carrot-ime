@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
@@ -32,6 +33,8 @@ internal sealed class TrayIcon : IDisposable
 
     // 직접 입력 상한(초). 600 이상을 입력하면 이 값으로 잘라 적용한다.
     private const int MaxIdleSeconds = 599;
+
+    private const string RepoUrl = "https://github.com/zendy00/carrot-ime";
 
     public TrayIcon(
         bool enabled, bool autoStart, int idleSeconds, Color indicatorColor, Color textColor,
@@ -86,6 +89,9 @@ internal sealed class TrayIcon : IDisposable
         var colorMenu = BuildColorMenu("Indicator color", IndicatorPalette.Swatches, indicatorColor, onColorChanged);
         var textColorMenu = BuildColorMenu("Text color", IndicatorPalette.TextSwatches, textColor, onTextColorChanged);
 
+        var aboutItem = new ToolStripMenuItem("About…");
+        aboutItem.Click += (_, _) => ShowAbout();
+
         var exitItem = new ToolStripMenuItem("Exit");
         exitItem.Click += (_, _) => onExit();
 
@@ -95,6 +101,7 @@ internal sealed class TrayIcon : IDisposable
         menu.Items.Add(colorMenu);
         menu.Items.Add(textColorMenu);
         menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(aboutItem);
         menu.Items.Add(exitItem);
 
         // 열릴 때마다 윈도우 다크/라이트 테마에 맞춰 색을 적용.
@@ -111,6 +118,46 @@ internal sealed class TrayIcon : IDisposable
 
     private static string FormatSeconds(int sec) =>
         sec == 0 ? "Always" : sec % 60 == 0 ? $"{sec / 60}m" : $"{sec}s";
+
+    // 앱 이름·버전·만든이와 GitHub 링크를 보여주는 소형 정보 대화상자.
+    private static void ShowAbout()
+    {
+        using var form = new Form
+        {
+            Text = "About CarrotIME",
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            StartPosition = FormStartPosition.CenterScreen,
+            MinimizeBox = false,
+            MaximizeBox = false,
+            ShowInTaskbar = false,
+            TopMost = true, // 트레이 메뉴에서 열리므로 다른 창에 가려지지 않게
+            ClientSize = new Size(300, 134)
+        };
+        // 제목 왼쪽에 당근 아이콘(트레이와 동일 그림, 글자 없이)
+        using var carrot = new Bitmap(IconSize, IconSize);
+        using (var cg = Graphics.FromImage(carrot))
+        {
+            cg.SmoothingMode = SmoothingMode.AntiAlias;
+            DrawCarrot(cg);
+        }
+        var icon = new PictureBox { Image = carrot, Size = new Size(IconSize, IconSize), Location = new Point(12, 10) };
+        var title = new Label
+        {
+            Text = $"CarrotIME v{Application.ProductVersion}",
+            Font = new Font(form.Font, FontStyle.Bold),
+            AutoSize = true,
+            Location = new Point(52, 18)
+        };
+        var author = new Label { Text = "Made by : zendy", AutoSize = true, Location = new Point(12, 52) };
+        var link = new LinkLabel { Text = RepoUrl, AutoSize = true, Location = new Point(12, 74) };
+        link.LinkClicked += (_, _) =>
+            Process.Start(new ProcessStartInfo(RepoUrl) { UseShellExecute = true }); // 기본 브라우저로 열기
+        var ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Location = new Point(213, 100), Width = 75 };
+        form.Controls.AddRange(new Control[] { icon, title, author, link, ok });
+        form.AcceptButton = ok;
+        form.CancelButton = ok;
+        form.ShowDialog();
+    }
 
     // 프리셋은 라디오처럼 하나만 체크. 프리셋 밖 값이면 텍스트박스에 현재값을 표시한다.
     private void UpdateIdleChecks(int sec)
@@ -226,21 +273,21 @@ internal sealed class TrayIcon : IDisposable
         return Icon.FromHandle(_hIcon);
     }
 
-    // 32x32 기준 당근: 위에 초록 잎, 아래로 뾰족한 주황 몸통.
+    // 32x32 기준 당근: 위에 초록 잎, 아래로 뾰족한 주황 몸통. 폭을 거의 꽉 채워 통통하게.
     private static void DrawCarrot(Graphics g)
     {
         using var leaf = new SolidBrush(CarrotLeaf);
-        g.FillEllipse(leaf, 14, 0, 4, 9);   // 가운데 잎
-        g.FillEllipse(leaf, 9, 2, 4, 8);    // 왼쪽 잎
-        g.FillEllipse(leaf, 19, 2, 4, 8);   // 오른쪽 잎
+        g.FillEllipse(leaf, 14, 0, 4, 8);   // 가운데 잎
+        g.FillEllipse(leaf, 8, 1, 5, 8);    // 왼쪽 잎
+        g.FillEllipse(leaf, 19, 1, 5, 8);   // 오른쪽 잎
 
         using var body = new SolidBrush(CarrotBody);
         var cone = new[]
         {
-            new Point(6, 11), new Point(26, 11), new Point(16, 31)
+            new Point(3, 12), new Point(29, 12), new Point(16, 31)
         };
         g.FillPolygon(body, cone);
-        g.FillEllipse(body, 6, 6, 20, 12);  // 둥근 윗부분
+        g.FillEllipse(body, 3, 5, 26, 13);  // 둥근 윗부분
     }
 
     public void Dispose()

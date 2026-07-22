@@ -19,6 +19,8 @@
     <!-- AssemblyVersion는 고정, FileVersion/InformationalVersion만 빌드마다 증가 -->
     <Version>1.0.0</Version>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <!-- InformationalVersion 뒤에 git 커밋 해시(+sha)가 붙지 않게 — About 표시용 -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
