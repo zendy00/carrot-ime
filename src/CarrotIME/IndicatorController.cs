@@ -125,6 +125,8 @@ internal sealed class IndicatorController : IDisposable
         else if (_inputStateTimer.Enabled)
         {
             _inputStateTimer.Stop();
+            // 편집 필드를 벗어나 유휴로 들어가는 시점 — 작업 집합을 반납해 RAM 점유를 낮춘다.
+            Win32.TrimWorkingSet();
         }
     }
 

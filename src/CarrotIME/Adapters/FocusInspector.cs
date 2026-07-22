@@ -1,10 +1,11 @@
-using System.Windows.Automation;
+using Windows.Win32.UI.Accessibility;
 
 namespace CarrotIME.Adapters;
 
 /// <summary>
 /// 현재 포커스된 요소가 텍스트 입력 컨트롤인지 판정한다 — "편집 포커스" 신호(Ticket 03).
 /// 캐럿을 못 얻는 상황에서도 편집 포커스 여부를 알 수 있게 해 Ticket 04(고정 폴백)의 토대가 된다.
+/// COM UIA 직접 호출(WPF 비의존).
 /// </summary>
 internal static class FocusInspector
 {
@@ -12,20 +13,21 @@ internal static class FocusInspector
     {
         try
         {
-            AutomationElement? focused = AutomationElement.FocusedElement;
+            IUIAutomationElement focused = UiaClient.Instance.GetFocusedElement();
             if (focused is null)
                 return false;
 
             // 진짜 편집 텍스트 컨트롤(Edit/Document)만 인정한다. 브라우저는 문서 조상에
-            // TextPattern을 노출하는 경우가 많아, IsTextPatternAvailable만 보면 버튼·링크에
+            // TextPattern을 노출하는 경우가 많아, TextPattern 유무만 보면 버튼·링크에
             // 포커스가 있어도 편집으로 오판된다 → 여기선 컨트롤 타입으로 엄격히 판정.
-            ControlType ct = focused.Current.ControlType;
-            if (ct != ControlType.Edit && ct != ControlType.Document)
+            UIA_CONTROLTYPE_ID ct = focused.CurrentControlType;
+            if (ct != UIA_CONTROLTYPE_ID.UIA_EditControlTypeId
+                && ct != UIA_CONTROLTYPE_ID.UIA_DocumentControlTypeId)
                 return false;
 
             // 읽기 전용 텍스트(표시 전용)면 입력 불가로 간주.
-            if (focused.TryGetCurrentPattern(ValuePattern.Pattern, out object vp)
-                && vp is ValuePattern value && value.Current.IsReadOnly)
+            if (focused.GetCurrentPattern(UIA_PATTERN_ID.UIA_ValuePatternId)
+                is IUIAutomationValuePattern value && value.CurrentIsReadOnly)
                 return false;
 
             return true;

@@ -68,6 +68,9 @@ internal static class Program
         controller.StateChanged = tray.SetGlyph; // 트레이 아이콘에 현재 입력 상태 글자 표시
         controller.Start();
 
+        // 시작 초기화가 끝난 시점에 작업 집합을 한 번 반납(시작 직후 RAM 점유 축소).
+        Adapters.Win32.TrimWorkingSet();
+
         Application.Run();
     }
 }

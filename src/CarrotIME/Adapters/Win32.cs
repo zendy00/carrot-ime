@@ -105,4 +105,19 @@ internal static class Win32
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool DestroyIcon(IntPtr hIcon);
+
+    [DllImport("kernel32.dll")]
+    internal static extern IntPtr GetCurrentProcess();
+
+    [DllImport("kernel32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool SetProcessWorkingSetSize(
+        IntPtr hProcess, IntPtr dwMinimumWorkingSetSize, IntPtr dwMaximumWorkingSetSize);
+
+    /// <summary>
+    /// 작업 집합(물리 메모리 점유)을 OS에 반납한다. 커밋 메모리는 그대로지만
+    /// 작업관리자 수치가 내려가고, 유휴 트레이 앱의 실제 RAM 점유도 줄어든다.
+    /// </summary>
+    internal static void TrimWorkingSet() =>
+        SetProcessWorkingSetSize(GetCurrentProcess(), new IntPtr(-1), new IntPtr(-1));
 }

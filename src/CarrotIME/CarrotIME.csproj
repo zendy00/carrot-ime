@@ -3,10 +3,13 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
+    <!-- WPF는 사용하지 않는다 — UIA는 COM(IUIAutomation, CsWin32 생성)으로 직접 호출.
+         UseWPF를 켜면 WPF 스택이 번들·로드되어 메모리·exe 크기가 크게 늘어난다. -->
     <UseWindowsForms>true</UseWindowsForms>
-    <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- COM UIA의 SAFEARRAY* 결과를 직접 읽기 위해 필요(UiaCaret) -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -20,6 +23,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CarrotIME.Core\CarrotIME.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.298">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
 
   <!--
@@ -51,8 +61,7 @@
       <_PublishedExe>$(PublishDir)$(AssemblyName).exe</_PublishedExe>
       <_VersionedExe>$(PublishDir)$(AssemblyName)-$(FileVersion).exe</_VersionedExe>
     </PropertyGroup>
-    <Move SourceFiles="$(_PublishedExe)" DestinationFiles="$(_VersionedExe)"
-          Condition="Exists('$(_PublishedExe)')" />
+    <Move SourceFiles="$(_PublishedExe)" DestinationFiles="$(_VersionedExe)" Condition="Exists('$(_PublishedExe)')" />
     <Message Importance="high" Text="Published: $(_VersionedExe)" />
   </Target>
 

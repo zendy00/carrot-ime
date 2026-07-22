@@ -1,0 +1,11 @@
+// CsWin32 소스 생성 대상 — COM UIA(UIAutomationCore) 최소 사용분.
+// WPF 관리형 UIA(System.Windows.Automation) 의존을 없애 메모리·exe 크기를 줄인다.
+CUIAutomation
+IUIAutomation
+IUIAutomationElement
+IUIAutomationTextPattern
+IUIAutomationTextRange
+IUIAutomationValuePattern
+UIA_PATTERN_ID
+UIA_CONTROLTYPE_ID
+SafeArrayDestroy
