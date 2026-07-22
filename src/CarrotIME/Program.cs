@@ -16,6 +16,7 @@ internal static class Program
 
         AppSettings settings = AppSettings.Load();
 
+        // 배경색 ARGB의 A는 투명도로 쓰인다 — 색(RGB)과 투명도를 각자 바꿔도 서로 유지되게 분리 관리.
         Color indicatorColor = Color.FromArgb(settings.IndicatorColorArgb);
         Color textColor = Color.FromArgb(settings.IndicatorTextColorArgb);
 
@@ -29,8 +30,9 @@ internal static class Program
             enabled: settings.Enabled,
             autoStart: AutoStart.IsEnabled(),
             idleSeconds: settings.IdleSeconds,
-            indicatorColor: indicatorColor,
+            indicatorColor: Color.FromArgb(255, indicatorColor), // 색 메뉴는 RGB만 다룬다
             textColor: textColor,
+            opacityPercent: (int)Math.Round(indicatorColor.A * 100.0 / 255),
             onEnabledChanged: enabled =>
             {
                 controller.Enabled = enabled;
@@ -53,14 +55,23 @@ internal static class Program
             },
             onColorChanged: color =>
             {
-                controller.IndicatorColor = color;
-                settings.IndicatorColorArgb = color.ToArgb();
+                indicatorColor = Color.FromArgb(indicatorColor.A, color); // 투명도 유지, RGB만 교체
+                controller.IndicatorColor = indicatorColor;
+                settings.IndicatorColorArgb = indicatorColor.ToArgb();
                 settings.Save();
             },
             onTextColorChanged: color =>
             {
                 controller.IndicatorTextColor = color;
                 settings.IndicatorTextColorArgb = color.ToArgb();
+                settings.Save();
+            },
+            onOpacityChanged: percent =>
+            {
+                indicatorColor = Color.FromArgb(
+                    (int)Math.Round(percent * 255.0 / 100), indicatorColor); // RGB 유지, 투명도만 교체
+                controller.IndicatorColor = indicatorColor;
+                settings.IndicatorColorArgb = indicatorColor.ToArgb();
                 settings.Save();
             },
             onExit: Application.Exit);

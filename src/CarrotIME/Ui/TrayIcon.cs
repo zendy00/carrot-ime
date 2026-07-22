@@ -38,9 +38,10 @@ internal sealed class TrayIcon : IDisposable
 
     public TrayIcon(
         bool enabled, bool autoStart, int idleSeconds, Color indicatorColor, Color textColor,
+        int opacityPercent,
         Action<bool> onEnabledChanged, Func<bool, bool> onAutoStartChanged,
         Action<int> onIdleSecondsChanged, Action<Color> onColorChanged,
-        Action<Color> onTextColorChanged, Action onExit)
+        Action<Color> onTextColorChanged, Action<int> onOpacityChanged, Action onExit)
     {
         // 체크 = 일시정지 상태(=꺼짐). CheckOnClick으로 Click 전에 Checked가 갱신됨.
         _pauseItem = new ToolStripMenuItem("Pause") { Checked = !enabled, CheckOnClick = true };
@@ -89,6 +90,27 @@ internal sealed class TrayIcon : IDisposable
         var colorMenu = BuildColorMenu("Indicator color", IndicatorPalette.Swatches, indicatorColor, onColorChanged);
         var textColorMenu = BuildColorMenu("Text color", IndicatorPalette.TextSwatches, textColor, onTextColorChanged);
 
+        // 인디케이터 투명도 — 메뉴 안 슬라이더로 조절(드래그 즉시 반영). 20% 미만은
+        // 사실상 안 보여서 하한을 20으로 둔다.
+        var opacityMenu = new ToolStripMenuItem(OpacityTitle(opacityPercent));
+        var opacityTrack = new TrackBar
+        {
+            Minimum = 20,
+            Maximum = 100,
+            SmallChange = 5,
+            LargeChange = 10,
+            TickStyle = TickStyle.None,
+            AutoSize = false,
+            Size = new Size(140, 28),
+            Value = Math.Clamp(opacityPercent, 20, 100)
+        };
+        opacityTrack.ValueChanged += (_, _) =>
+        {
+            onOpacityChanged(opacityTrack.Value);
+            opacityMenu.Text = OpacityTitle(opacityTrack.Value);
+        };
+        opacityMenu.DropDownItems.Add(new ToolStripControlHost(opacityTrack));
+
         var aboutItem = new ToolStripMenuItem("About…");
         aboutItem.Click += (_, _) => ShowAbout();
 
@@ -100,6 +122,7 @@ internal sealed class TrayIcon : IDisposable
         menu.Items.Add(_idleMenu);
         menu.Items.Add(colorMenu);
         menu.Items.Add(textColorMenu);
+        menu.Items.Add(opacityMenu);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(aboutItem);
         menu.Items.Add(exitItem);
@@ -118,6 +141,8 @@ internal sealed class TrayIcon : IDisposable
 
     private static string FormatSeconds(int sec) =>
         sec == 0 ? "Always" : sec % 60 == 0 ? $"{sec / 60}m" : $"{sec}s";
+
+    private static string OpacityTitle(int percent) => $"Opacity ({percent}%)";
 
     // 앱 이름·버전·만든이와 GitHub 링크를 보여주는 소형 정보 대화상자.
     private static void ShowAbout()

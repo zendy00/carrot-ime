@@ -16,8 +16,9 @@ internal sealed class AppSettings
     // 입력 후 인디케이터가 다시 표시되기까지의 유휴 시간(초).
     public int IdleSeconds { get; set; } = 20;
 
-    // 인디케이터(캐럿 옆 원) 배경색 ARGB.
-    public int IndicatorColorArgb { get; set; } = Ui.IndicatorPalette.Default.ToArgb();
+    // 인디케이터(캐럿 옆 원) 배경색 ARGB. A는 투명도 — 기본 75% 불투명(191).
+    public int IndicatorColorArgb { get; set; } =
+        System.Drawing.Color.FromArgb(191, Ui.IndicatorPalette.Default).ToArgb();
 
     // 인디케이터 글자색 ARGB.
     public int IndicatorTextColorArgb { get; set; } = Ui.IndicatorPalette.DefaultText.ToArgb();

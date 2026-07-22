@@ -8,7 +8,8 @@ namespace CarrotIME.Ui;
 
 /// <summary>
 /// 캐럿 옆에 라벨 하나를 그리는 테두리 없는·최상단·클릭통과·비활성 오버레이 창.
-/// macOS 입력 소스 표시기처럼 원형 배경 + 글자(각각 색은 팔레트에서 선택). 항상 100% 불투명.
+/// macOS 입력 소스 표시기처럼 원형 배경 + 글자(각각 색은 팔레트에서 선택).
+/// 배경색 ARGB의 알파는 창 전체 투명도로 적용된다(settings.txt 직접 편집으로만 지정).
 /// </summary>
 internal sealed class OverlayForm : Form
 {
@@ -16,6 +17,7 @@ internal sealed class OverlayForm : Form
 
     private string _label = string.Empty;
     private Color _textColor = IndicatorPalette.DefaultText;
+    private byte _alpha = 255; // 창 전체 투명도(255=불투명). 배경색 ARGB의 A에서 온다.
 
     public OverlayForm()
     {
@@ -29,8 +31,17 @@ internal sealed class OverlayForm : Form
         Size = new Size(Diameter, Diameter);
     }
 
-    /// <summary>원형 배경색을 바꾼다(BackColor가 곧 원 색이며, 설정 시 자동 다시 그림).</summary>
-    public void SetColor(Color color) => BackColor = color;
+    /// <summary>
+    /// 원형 배경색을 바꾼다(BackColor가 곧 원 색이며, 설정 시 자동 다시 그림).
+    /// 알파(A&lt;255)는 창 전체 투명도로 적용 — 글자도 함께 옅어진다.
+    /// </summary>
+    public void SetColor(Color color)
+    {
+        BackColor = Color.FromArgb(255, color); // WinForms BackColor는 알파를 허용하지 않음
+        _alpha = color.A;
+        if (IsHandleCreated)
+            Win32.SetLayeredWindowAttributes(Handle, 0, _alpha, Win32.LWA_ALPHA);
+    }
 
     /// <summary>글자색을 바꾼다.</summary>
     public void SetTextColor(Color color)
@@ -60,8 +71,8 @@ internal sealed class OverlayForm : Form
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        // 레이어드 창을 100% 불투명으로
-        Win32.SetLayeredWindowAttributes(Handle, 0, 255, Win32.LWA_ALPHA);
+        // 레이어드 창 투명도 적용(기본 255=불투명, 배경색 ARGB의 A로 조절)
+        Win32.SetLayeredWindowAttributes(Handle, 0, _alpha, Win32.LWA_ALPHA);
         ApplyCircularRegion();
     }
 

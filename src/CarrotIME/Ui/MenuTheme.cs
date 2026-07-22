@@ -33,6 +33,9 @@ internal static class MenuTheme
             // 텍스트박스(직접 입력)는 기본 흰 배경이라 다크에선 배경도 어둡게 바꿔야 글자가 보인다.
             if (item is ToolStripTextBox box)
                 box.BackColor = dark ? Color.FromArgb(62, 62, 64) : SystemColors.Window;
+            // 슬라이더(투명도)도 기본 컨트롤 배경이라 메뉴 배경색으로 맞춘다.
+            if (item is ToolStripControlHost host && host.Control is TrackBar track)
+                track.BackColor = dark ? DarkBg : SystemColors.Menu;
             if (item is ToolStripMenuItem mi && mi.HasDropDownItems)
             {
                 mi.DropDown.BackColor = dark ? DarkBg : SystemColors.Menu;
