@@ -99,6 +99,38 @@ public class DeciderTests
     }
 
     [Fact]
+    public void Wide_rect_is_not_a_caret_and_anchors_left_of_the_rect()
+    {
+        // 빈 웹 입력필드에서 UIA selection이 캐럿 대신 입력 박스 전체 rect를 주는 경우 —
+        // 박스 오른쪽 끝이 아니라 박스 왼쪽(실제 캐럿 근처) 바깥에 붙어야 한다.
+        var view = Decider.Decide(Snap(new Rectangle(300, 200, 500, 30), Ko, Native));
+
+        Assert.True(view.Visible);
+        // rect.Left(300) - gap(4) - indicatorWidth(24) = 272, rect.Top = 200
+        Assert.Equal(new Point(272, 200), view.Position);
+    }
+
+    [Fact]
+    public void Character_width_rect_still_counts_as_caret()
+    {
+        // 문자 폭 정도(≤20px)로 확장된 rect는 캐럿으로 취급 — 오른쪽에 표시.
+        var view = Decider.Decide(Snap(new Rectangle(100, 200, 10, 16), Ko, Native));
+
+        Assert.True(view.Visible);
+        Assert.Equal(new Point(114, 200), view.Position); // rect.Right(110) + gap(4)
+    }
+
+    [Fact]
+    public void Wide_rect_near_left_screen_edge_is_clamped()
+    {
+        // 박스가 화면 왼쪽 끝에 붙어 있으면 왼쪽 바깥 대신 화면 안으로 클램프.
+        var view = Decider.Decide(Snap(new Rectangle(0, 200, 500, 30), Ko, Native));
+
+        Assert.True(view.Visible);
+        Assert.True(view.Position.X >= 0, "indicator must not overflow the screen left edge");
+    }
+
+    [Fact]
     public void Caret_near_right_edge_is_clamped_within_screen()
     {
         var view = Decider.Decide(Snap(new Rectangle(1915, 200, 2, 16), En, Alpha));

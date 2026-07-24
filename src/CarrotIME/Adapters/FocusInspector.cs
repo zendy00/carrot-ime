@@ -17,20 +17,24 @@ internal static class FocusInspector
             if (focused is null)
                 return false;
 
-            // 진짜 편집 텍스트 컨트롤(Edit/Document)만 인정한다. 브라우저는 문서 조상에
-            // TextPattern을 노출하는 경우가 많아, TextPattern 유무만 보면 버튼·링크에
-            // 포커스가 있어도 편집으로 오판된다 → 여기선 컨트롤 타입으로 엄격히 판정.
-            UIA_CONTROLTYPE_ID ct = focused.CurrentControlType;
-            if (ct != UIA_CONTROLTYPE_ID.UIA_EditControlTypeId
-                && ct != UIA_CONTROLTYPE_ID.UIA_DocumentControlTypeId)
-                return false;
-
-            // 읽기 전용 텍스트(표시 전용)면 입력 불가로 간주.
+            // 읽기 전용 값 컨트롤(표시 전용)이면 입력 불가로 간주.
             if (focused.GetCurrentPattern(UIA_PATTERN_ID.UIA_ValuePatternId)
                 is IUIAutomationValuePattern value && value.CurrentIsReadOnly)
                 return false;
 
-            return true;
+            // TextPattern의 읽기 전용 속성이 확정 답(bool)을 주면 컨트롤 타입과 무관하게
+            // 그걸 따른다 — Gmail 받는사람 같은 role=combobox 입력, role 없는 contenteditable도
+            // 편집으로 잡히고, 브라우저 본문·PDF는 읽기 전용 true라 제외된다.
+            if (focused.GetCurrentPattern(UIA_PATTERN_ID.UIA_TextPatternId)
+                is IUIAutomationTextPattern text
+                && text.DocumentRange.GetAttributeValue(
+                    UIA_TEXTATTRIBUTE_ID.UIA_IsReadOnlyAttributeId) is bool readOnly)
+                return !readOnly;
+
+            // 판정 불가(TextPattern 없음·혼합 속성) → 진짜 편집 텍스트 컨트롤 타입만 인정.
+            UIA_CONTROLTYPE_ID ct = focused.CurrentControlType;
+            return ct == UIA_CONTROLTYPE_ID.UIA_EditControlTypeId
+                || ct == UIA_CONTROLTYPE_ID.UIA_DocumentControlTypeId;
         }
         catch
         {

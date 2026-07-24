@@ -20,6 +20,10 @@ public static class Decider
     // 캐럿과 인디케이터 사이 간격 — 방금 친 글자를 가리지 않도록.
     private const int CaretGapX = 4;
 
+    // 캐럿(세로 막대·문자 폭 확장)으로 볼 수 있는 최대 폭. 이보다 넓으면 실제 캐럿이 아니라
+    // 입력 박스·선택 영역 rect다(빈 웹 입력필드에서 UIA selection이 박스 전체를 주는 경우).
+    private const int MaxCaretWidth = 20;
+
     // 고정 폴백 위치(활성 창 우상단)의 안쪽 여백.
     private const int FallbackMargin = 6;
 
@@ -89,9 +93,12 @@ public static class Decider
             return IndicatorView.Hidden;
 
         // 캐럿을 얻으면 캐럿 오른쪽에(방금 친 글자를 안 가리게), 못 얻으면(크롬 등)
-        // 활성 창 우상단에 폴백(Ticket 04).
+        // 활성 창 우상단에 폴백(Ticket 04). 캐럿이라기엔 넓은 rect(입력 박스·선택 영역)면
+        // 오른쪽 끝이 아니라 왼쪽(실제 캐럿 근처) 바깥에 붙인다.
         Point desired = s.Caret is Rectangle caret
-            ? new Point(caret.Right + CaretGapX, caret.Top)
+            ? caret.Width <= MaxCaretWidth
+                ? new Point(caret.Right + CaretGapX, caret.Top)
+                : new Point(caret.Left - CaretGapX - s.IndicatorSize.Width, caret.Top)
             : FallbackTopRight(s.ActiveWindowBounds, s.IndicatorSize);
 
         return new IndicatorView(true, label, ClampToScreen(desired, s.IndicatorSize, s.ScreenBounds));

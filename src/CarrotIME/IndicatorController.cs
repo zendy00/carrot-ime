@@ -13,10 +13,12 @@ namespace CarrotIME;
 /// </summary>
 internal sealed class IndicatorController : IDisposable
 {
+    // 네이티브·MSAA 캐럿은 편집 필드에서만 존재 → 편집 확정. UIA 캐럿은 selection 기반이라
+    // 읽기 전용 텍스트(브라우저 본문 클릭)에서도 잡힘 → 편집 확정 근거로 안 쓴다.
     private static readonly CaretResolver Caret = new(
-        GuiThreadInfoCaret.TryGet,
-        UiaCaret.TryGet,
-        MsaaCaret.TryGet);
+        new CaretResolver.Source(GuiThreadInfoCaret.TryGet, ImpliesEditable: true),
+        new CaretResolver.Source(UiaCaret.TryGet, ImpliesEditable: false),
+        new CaretResolver.Source(MsaaCaret.TryGet, ImpliesEditable: true));
 
     private readonly OverlayForm _overlay = new();
     private readonly System.Windows.Forms.Timer _inputStateTimer;
@@ -155,10 +157,11 @@ internal sealed class IndicatorController : IDisposable
 
         uint threadId = Win32.GetWindowThreadProcessId(foreground, out _);
         var (langId, conversionMode) = ImeStateReader.Read(foreground, threadId);
-        Rectangle? caret = Caret.Resolve(threadId);
+        var caretHit = Caret.Resolve(threadId);
+        Rectangle? caret = caretHit?.Rect;
 
-        // 캐럿을 얻었으면 편집 포커스 확정. 못 얻었을 때만 UIA로 텍스트 컨트롤 여부 추가 확인.
-        bool editable = caret is not null || FocusInspector.IsTextControl();
+        // 편집 확정 소스의 캐럿이면 그대로 인정, 아니면 UIA로 텍스트 컨트롤 여부를 확인.
+        bool editable = caretHit?.ImpliesEditable == true || FocusInspector.IsTextControl();
 
         long millisSinceActivity = TrackActivity(caret, foregroundChanged);
 

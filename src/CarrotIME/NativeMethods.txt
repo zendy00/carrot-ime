@@ -8,4 +8,5 @@ IUIAutomationTextRange
 IUIAutomationValuePattern
 UIA_PATTERN_ID
 UIA_CONTROLTYPE_ID
+UIA_TEXTATTRIBUTE_ID
 SafeArrayDestroy
