@@ -8,6 +8,7 @@ struct CaretReading {
     var caret: CGRect?          // top-left 전역 좌표
     var windowBounds: CGRect    // top-left 전역 좌표
     var role: String
+    var focusedElement: AXUIElement?  // 포커스 변화 감지용(유휴 카운트 리셋).
 }
 
 enum CaretReader {
@@ -18,22 +19,11 @@ enum CaretReader {
         let elem = focused as! AXUIElement
         let role = (copyAttr(elem, kAXRoleAttribute) as? String) ?? ""
         return CaretReading(
-            editableFocus: isEditable(elem, role: role),
+            editableFocus: FocusInspector.isEditable(elem, role: role),
             caret: caretRect(elem),
             windowBounds: focusedWindowBounds(axApp) ?? .zero,
-            role: role)
-    }
-
-    // 스켈레톤 휴리스틱: 텍스트류 역할이거나 값 설정 가능(읽기 전용 배제 근사).
-    // TODO: Windows FocusInspector 이식 — ValuePattern readonly / role 화이트리스트 정교화.
-    private static func isEditable(_ elem: AXUIElement, role: String) -> Bool {
-        let textRoles: Set<String> = ["AXTextField", "AXTextArea", "AXComboBox"]
-        if textRoles.contains(role) { return true }
-        var settable: DarwinBoolean = false
-        if AXUIElementIsAttributeSettable(elem, kAXValueAttribute as CFString, &settable) == .success {
-            return settable.boolValue
-        }
-        return false
+            role: role,
+            focusedElement: elem)
     }
 
     // 캐럿(빈 선택)의 화면 rect. 선택 영역이면 그 범위 rect.
