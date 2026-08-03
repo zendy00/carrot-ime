@@ -11,11 +11,17 @@ BIN=".build/${CONFIG}/CarrotIME"
 echo "▸ swift build (${CONFIG})…"
 swift build -c "${CONFIG}"
 
+echo "▸ 앱 아이콘 생성(.iconset → .icns)…"
+ICONSET="build/AppIcon.iconset"
+".build/${CONFIG}/IconGen" "${ICONSET}"
+iconutil -c icns "${ICONSET}" -o "build/AppIcon.icns"
+
 echo "▸ .app 번들 조립…"
 rm -rf "${APP}"
 mkdir -p "${APP}/Contents/MacOS" "${APP}/Contents/Resources"
 cp "${BIN}" "${APP}/Contents/MacOS/CarrotIME"
 cp bundle/Info.plist "${APP}/Contents/Info.plist"
+cp "build/AppIcon.icns" "${APP}/Contents/Resources/AppIcon.icns"
 
 echo "▸ ad-hoc 코드서명…"
 codesign --force --sign - "${APP}"

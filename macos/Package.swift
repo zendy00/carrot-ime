@@ -18,5 +18,6 @@ let package = Package(
         .executableTarget(name: "CaretProbe", path: "Sources/CaretProbe"),
         .executableTarget(name: "ImeProbe", path: "Sources/ImeProbe"),
         .executableTarget(name: "BrowserCaretProbe", path: "Sources/BrowserCaretProbe"),
+        .executableTarget(name: "IconGen", path: "Sources/IconGen"),
     ]
 )

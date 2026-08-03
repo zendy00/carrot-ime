@@ -22,13 +22,28 @@ final class StatusItemController: NSObject {
     override init() {
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
-        item.button?.title = "🥕"
+        if let button = item.button {
+            // 당근 아이콘(SF Symbol, 템플릿 → 라이트/다크 자동). 옆에 상태 글자.
+            if let carrot = NSImage(systemSymbolName: "carrot", accessibilityDescription: "CarrotIME") {
+                carrot.isTemplate = true
+                button.image = carrot
+                button.imagePosition = .imageLeading
+            }
+            button.title = ""
+        }
         item.menu = buildMenu()
         syncStates()
     }
 
     func update(state: InputState, inputSourceId: String) {
-        item.button?.title = Decider.trayLabel(state, inputSourceId: inputSourceId)
+        guard let button = item.button else { return }
+        let letter = Decider.trayLabel(state, inputSourceId: inputSourceId)
+        if button.image != nil {
+            button.imagePosition = .imageLeading // 이미지+글자 둘 다 보이도록 매번 보장.
+            button.title = " \(letter)"
+        } else {
+            button.title = letter
+        }
     }
 
     // MARK: - 메뉴 구성
