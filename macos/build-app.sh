@@ -23,8 +23,17 @@ cp "${BIN}" "${APP}/Contents/MacOS/CarrotIME"
 cp bundle/Info.plist "${APP}/Contents/Info.plist"
 cp "build/AppIcon.icns" "${APP}/Contents/Resources/AppIcon.icns"
 
-echo "▸ ad-hoc 코드서명…"
-codesign --force --sign - "${APP}"
+echo "▸ 코드서명…"
+SIGN_KC="carrotime-signing.keychain-db"
+SIGN_CN="CarrotIME Local"
+if security find-identity -p codesigning "${SIGN_KC}" 2>/dev/null | grep -q "${SIGN_CN}"; then
+    security unlock-keychain -p carrotime "${SIGN_KC}" 2>/dev/null || true
+    codesign --force --sign "${SIGN_CN}" "${APP}"
+    echo "  (자체 서명 인증서 — 재빌드해도 접근성 권한 유지)"
+else
+    codesign --force --sign - "${APP}"
+    echo "  (ad-hoc — 재빌드 시 접근성 재설정 필요. tools/make-signing-cert.sh 실행하면 안정화)"
+fi
 
 echo "✓ ${APP}"
 echo "  실행:  open ${APP}"

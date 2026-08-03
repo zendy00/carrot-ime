@@ -49,12 +49,19 @@ open /Applications/CarrotIME.app
 ### 접근성 권한 (필수)
 캐럿을 읽으려면 접근성(TCC) 권한이 필요하다. 실행 후 **시스템 설정 → 개인정보 보호 및 보안 → 손쉬운 사용**에서 CarrotIME를 켠다.
 
-> **ad-hoc 서명 주의(재빌드 시).** 서명 인증서가 없어 `build-app.sh`는 ad-hoc 서명한다. 재빌드/재설치하면 서명(cdhash)이 바뀌어 **이전 권한 항목과 안 맞고, 켜도 신뢰되지 않는다**(`AXTrusted=false`). 이럴 땐 초기화 후 다시 켠다:
-> ```
-> tccutil reset Accessibility com.carrotime.mac
-> open /Applications/CarrotIME.app     # 다시 손쉬운 사용에서 켜기
-> ```
-> 재빌드마다 번거로우면 **자체 서명 인증서**로 서명하면 권한이 유지된다(후속 과제).
+### 서명 — 재빌드해도 권한 유지
+`build-app.sh`는 **로컬 자체 서명 인증서**(`CarrotIME Local`)가 있으면 그걸로 서명한다. 그러면
+designated requirement가 인증서 리프에 고정돼 **재빌드/재설치해도 접근성 권한이 유지**된다.
+최초 1회 인증서를 만든다(전용 키체인만 생성, 로그인 키체인/암호는 안 건드림):
+
+```
+cd macos
+./tools/make-signing-cert.sh     # 1회
+```
+
+- 인증서가 없으면 `build-app.sh`는 **ad-hoc** 서명으로 폴백하는데, 이 경우 재빌드마다 서명(cdhash)이 바뀌어 권한이 무효화된다(`AXTrusted=false`). 그때는 `tccutil reset Accessibility com.carrotime.mac` 후 다시 켠다.
+- 자체 서명으로 **처음 전환할 때**는 서명 신원이 바뀌므로 한 번은 `tccutil reset` + 재허용이 필요하다. 그 뒤로는 유지된다.
+- 되돌리기: `security delete-keychain carrotime-signing.keychain-db`.
 
 ## 동작 · 설정
 
@@ -73,7 +80,7 @@ swift test        # Swift Testing (XCTest는 CLT 툴체인에 없어 미사용).
 
 ## 알려진 한계
 
-- 배포용 Developer ID 서명/공증 미구현(ad-hoc은 로컬용).
+- 로컬 자체 서명(`CarrotIME Local`)까지만. 배포용 Developer ID 서명/공증은 미구현(Gatekeeper 배포 불가, 로컬 실행용).
 - **입력 소스 전환 HUD 억제 불가**: 전환 표시는 SIP 보호 시스템 에이전트(`TextInputSwitcher`)가 온디맨드로 그리며 공개 토글/억제 API가 없다(스파이크로 확인). 상주 인디케이터는 이와 무관하게 동작.
 - Chromium은 AX 활성화 시 대상 앱 CPU/RAM이 다소 늘 수 있다. 멀티라인/캔버스 등은 창 폴백.
 
