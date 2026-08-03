@@ -94,10 +94,10 @@ final class StatusItemController: NSObject {
             mkItem($0.0, #selector(pickOpacity(_:)), NSNumber(value: $0.1))
         }))
         menu.addItem(submenu("배경색", IndicatorPalette.backgrounds.map {
-            mkItem($0.name, #selector(pickBg(_:)), $0.hex as NSString)
+            colorItem($0.name, #selector(pickBg(_:)), $0.hex)
         }))
         menu.addItem(submenu("글자색", IndicatorPalette.foregrounds.map {
-            mkItem($0.name, #selector(pickFg(_:)), $0.hex as NSString)
+            colorItem($0.name, #selector(pickFg(_:)), $0.hex)
         }))
 
         menu.addItem(.separator())
@@ -118,6 +118,28 @@ final class StatusItemController: NSObject {
         it.target = self
         it.representedObject = rep
         return it
+    }
+
+    // 이름 앞에 색상 견본을 붙인 메뉴 항목.
+    private func colorItem(_ name: String, _ action: Selector, _ hex: String) -> NSMenuItem {
+        let it = mkItem(name, action, hex as NSString)
+        it.image = swatch(hex)
+        return it
+    }
+
+    private func swatch(_ hex: String) -> NSImage {
+        let size = NSSize(width: 14, height: 14)
+        let image = NSImage(size: size)
+        image.lockFocus()
+        let rect = NSRect(x: 1, y: 1, width: 12, height: 12)
+        let path = NSBezierPath(roundedRect: rect, xRadius: 3, yRadius: 3)
+        IndicatorPalette.color(hex).setFill()
+        path.fill()
+        NSColor.separatorColor.setStroke()
+        path.lineWidth = 0.5
+        path.stroke()
+        image.unlockFocus()
+        return image
     }
 
     private func submenu(_ title: String, _ items: [NSMenuItem]) -> NSMenuItem {
@@ -162,7 +184,7 @@ final class StatusItemController: NSObject {
     @objc private func about() {
         let a = NSAlert()
         a.messageText = "CarrotIME (macOS)"
-        a.informativeText = "캐럿 옆 입력 상태 표시기 — macOS 포팅(개발 중)."
+        a.informativeText = "캐럿 옆 입력 상태 표시기.\nmade by zendy"
         a.addButton(withTitle: "확인")
         a.runModal()
     }
