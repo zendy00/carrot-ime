@@ -10,6 +10,7 @@ let package = Package(
     platforms: [.macOS(.v13)],
     targets: [
         .target(name: "CarrotIMECore", path: "Sources/CarrotIMECore"),
+        .testTarget(name: "CarrotIMECoreTests", dependencies: ["CarrotIMECore"], path: "Tests/CarrotIMECoreTests"),
         .executableTarget(
             name: "CarrotIME",
             dependencies: ["CarrotIMECore"],

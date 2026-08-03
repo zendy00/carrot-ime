@@ -61,10 +61,11 @@ final class IndicatorController {
         }
         let idleMs = Int(Date().timeIntervalSince(lastActivity) * 1000)
 
-        let anchor = reading.caret?.origin ?? reading.windowBounds.origin
+        let anchor = reading.caret?.origin ?? reading.fieldFrame?.origin ?? reading.windowBounds.origin
         let snap = InputSnapshot(
             editableFocus: reading.editableFocus,
             caret: reading.caret,
+            fieldFrame: reading.fieldFrame,
             activeWindowBounds: reading.windowBounds,
             screenBounds: Coord.screenBoundsTopLeft(containing: anchor),
             indicatorSize: overlay.indicatorSize,

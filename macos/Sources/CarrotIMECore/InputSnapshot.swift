@@ -5,6 +5,8 @@ import CoreGraphics
 public struct InputSnapshot {
     public let editableFocus: Bool
     public let caret: CGRect?
+    /// 포커스된 편집 요소의 프레임(kAXFrame). 정밀 캐럿이 없을 때(예: Chromium) 폴백 앵커.
+    public let fieldFrame: CGRect?
     public let activeWindowBounds: CGRect
     public let screenBounds: CGRect
     public let indicatorSize: CGSize
@@ -17,6 +19,7 @@ public struct InputSnapshot {
     public init(
         editableFocus: Bool,
         caret: CGRect?,
+        fieldFrame: CGRect? = nil,
         activeWindowBounds: CGRect,
         screenBounds: CGRect,
         indicatorSize: CGSize,
@@ -25,6 +28,7 @@ public struct InputSnapshot {
     ) {
         self.editableFocus = editableFocus
         self.caret = caret
+        self.fieldFrame = fieldFrame
         self.activeWindowBounds = activeWindowBounds
         self.screenBounds = screenBounds
         self.indicatorSize = indicatorSize

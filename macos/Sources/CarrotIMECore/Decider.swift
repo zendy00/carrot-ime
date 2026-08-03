@@ -60,21 +60,35 @@ public enum Decider {
         // 입력 중(최근 캐럿 이동)에는 숨기고, 설정된 유휴 시간이 지나면 다시 표시.
         if s.millisSinceInputActivity < idleReappearMs { return .hidden }
 
-        // 캐럿을 얻으면 오른쪽에(방금 친 글자를 안 가리게), 넓은 rect(입력 박스·선택 영역)면
-        // 왼쪽 바깥에, 캐럿을 못 얻으면 활성 창 우상단에 폴백.
+        // 앵커 3단 폴백:
+        //  1) 정밀 캐럿(sane)이 있으면 그 오른쪽(넓은 선택 rect면 왼쪽 바깥).
+        //  2) 없으면(예: Chromium은 캐럿 rect가 0x0 쓰레기) 필드 프레임 오른쪽 가장자리.
+        //  3) 그것도 없으면 활성 창 우상단.
         let desired: CGPoint
-        if let caret = s.caret {
-            if caret.width <= maxCaretWidth {
-                desired = CGPoint(x: caret.maxX + caretGapX, y: caret.minY)
-            } else {
-                desired = CGPoint(x: caret.minX - caretGapX - s.indicatorSize.width, y: caret.minY)
-            }
+        if let caret = s.caret, isSaneCaret(caret) {
+            desired = caret.width <= maxCaretWidth
+                ? CGPoint(x: caret.maxX + caretGapX, y: caret.minY)
+                : CGPoint(x: caret.minX - caretGapX - s.indicatorSize.width, y: caret.minY)
+        } else if let frame = s.fieldFrame, isSaneFieldFrame(frame) {
+            desired = CGPoint(x: frame.maxX + caretGapX,
+                              y: frame.midY - s.indicatorSize.height / 2)
         } else {
             desired = fallbackTopRight(s.activeWindowBounds, s.indicatorSize)
         }
 
         return IndicatorView(visible: true, label: text,
                              position: clampToScreen(desired, s.indicatorSize, s.screenBounds))
+    }
+
+    /// 캐럿 rect가 쓸 만한가. Chromium은 (0x0) 같은 퇴화 rect를 주므로 높이로 거른다.
+    static func isSaneCaret(_ r: CGRect) -> Bool {
+        r.height > 3 && r.height < 400 && r.width >= 0 && r.width < 2000
+    }
+
+    /// 프레임이 단일행~소형 입력 필드로 볼 만한가. 거대한 웹영역(문서 전체)·멀티라인은 제외해
+    /// 엉뚱한 앵커 대신 창 폴백으로 떨어지게 한다.
+    static func isSaneFieldFrame(_ r: CGRect) -> Bool {
+        r.width > 1 && r.height > 3 && r.height < 120
     }
 
     // 활성 창 우상단 안쪽.
