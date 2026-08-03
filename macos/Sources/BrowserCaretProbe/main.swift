@@ -45,14 +45,38 @@ func ownerName(_ e: AXUIElement) -> String {
     return NSRunningApplication(processIdentifier: pid)?.localizedName ?? "pid \(pid)"
 }
 
-// 요소 하나를 한 줄로 요약(역할·서브역할·캐럿·소유앱·조상체인).
+func rectStr(_ r: CGRect?) -> String {
+    r.map { String(format: "(%.0f,%.0f %.0fx%.0f)", $0.origin.x, $0.origin.y, $0.width, $0.height) } ?? "<none>"
+}
+
+// 요소의 프레임(kAXPosition + kAXSize) — 캐럿 rect가 쓰레기일 때의 폴백 앵커.
+func frameRect(_ e: AXUIElement) -> CGRect? {
+    guard let p = copyAttr(e, kAXPositionAttribute as String),
+          let s = copyAttr(e, kAXSizeAttribute as String) else { return nil }
+    var pt = CGPoint.zero, sz = CGSize.zero
+    AXValueGetValue(p as! AXValue, .cgPoint, &pt)
+    AXValueGetValue(s as! AXValue, .cgSize, &sz)
+    return CGRect(origin: pt, size: sz)
+}
+
+func selRangeStr(_ e: AXUIElement) -> String {
+    guard let rv = copyAttr(e, kAXSelectedTextRangeAttribute as String) else { return "-" }
+    var r = CFRange()
+    AXValueGetValue(rv as! AXValue, .cfRange, &r)
+    return "loc\(r.location),len\(r.length)"
+}
+
+func valueLenStr(_ e: AXUIElement) -> String {
+    (copyAttr(e, kAXValueAttribute as String) as? String).map { "\($0.count)" } ?? "-"
+}
+
+// 요소 하나를 요약(역할·캐럿·프레임·선택범위·값길이·소유앱·조상체인).
 func describe(_ e: AXUIElement) -> String {
     let role = str(e, kAXRoleAttribute as String)
     let sub = str(e, kAXSubroleAttribute as String)
-    let caret = caretRect(e).map {
-        String(format: "(%.0f,%.0f %.0fx%.0f)", $0.origin.x, $0.origin.y, $0.width, $0.height)
-    } ?? "<none>"
-    return "\(role)/\(sub) caret=\(caret) owner=\(ownerName(e))\n      anc: \(ancestry(e))"
+    return "\(role)/\(sub) owner=\(ownerName(e))"
+        + "\n      caret=\(rectStr(caretRect(e)))  frame=\(rectStr(frameRect(e)))  sel=\(selRangeStr(e))  vlen=\(valueLenStr(e))"
+        + "\n      anc: \(ancestry(e))"
 }
 
 let opts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
