@@ -9,7 +9,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // 접근성 권한 프롬프트(캐럿 읽기에 필수). 없으면 인디케이터는 숨겨지고 메뉴바만 동작.
         let opts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
-        _ = AXIsProcessTrustedWithOptions(opts)
+        let trusted = AXIsProcessTrustedWithOptions(opts)
+        Log.line("launch AXTrusted=\(trusted)")
 
         status = StatusItemController()
         controller = IndicatorController(status: status)

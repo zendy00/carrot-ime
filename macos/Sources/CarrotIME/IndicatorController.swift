@@ -13,6 +13,7 @@ final class IndicatorController {
     private var lastCaret: CGRect?
     private var lastFocused: AXUIElement?
     private var lastActivity = Date()
+    private var lastLogAt = Date.distantPast
 
     private let settings = AppSettings.shared
 
@@ -45,6 +46,7 @@ final class IndicatorController {
             overlay.apply(.hidden)
             lastFocused = nil
             lastCaret = nil
+            log("reading=nil (포커스 없음 또는 AX 미신뢰)")
             return
         }
 
@@ -72,7 +74,16 @@ final class IndicatorController {
             inputSourceId: inputSource.currentId,
             millisSinceInputActivity: idleMs)
 
-        overlay.apply(Decider.decide(snap, idleReappearMs: settings.idleReappearMs))
+        let view = Decider.decide(snap, idleReappearMs: settings.idleReappearMs)
+        overlay.apply(view)
+        log("front=\(NSWorkspace.shared.frontmostApplication?.localizedName ?? "?") role=\(reading.role) editable=\(reading.editableFocus) caret=\(reading.caret.map{"\($0)"} ?? "nil") idle=\(idleMs)ms → visible=\(view.visible)")
+    }
+
+    // 1초에 한 번만 남기는 스로틀 로그(디버그 활성 시).
+    private func log(_ s: String) {
+        guard Log.enabled, Date().timeIntervalSince(lastLogAt) > 1 else { return }
+        lastLogAt = Date()
+        Log.line(s)
     }
 
     // 같은 UI 요소를 가리키는지(포커스 변화 판정). AXUIElement는 CFEqual로 의미 비교된다.
