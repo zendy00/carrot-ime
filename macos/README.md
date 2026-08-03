@@ -20,19 +20,30 @@ cd macos
 swift run CarrotIME
 ```
 
-번들 `.app`(자동시작 테스트에 필요):
+번들 `.app` 설치(자동시작·정식 실행):
 
 ```
 cd macos
-./build-app.sh                 # release 빌드 + CarrotIME.app 조립 + ad-hoc 서명
-open build/CarrotIME.app
-# 자동시작(로그인 항목)은 /Applications 로 복사 후 실행 권장.
+./build-app.sh                                   # release 빌드 + .app 조립 + 아이콘 + ad-hoc 서명
+rm -rf /Applications/CarrotIME.app
+cp -R build/CarrotIME.app /Applications/
+open /Applications/CarrotIME.app
 ```
 
-- 처음 실행 시 **접근성 권한(TCC)** 프롬프트. 손쉬운 사용에서 허용 후 재실행.
-- 메뉴바에 현재 상태 글자(가/A/あ). TextEdit·메모 등 텍스트 필드에 포커스하고 **20초 유휴**하면 캐럿 옆에 인디케이터가 뜬다(타이핑 중엔 숨음 — 스펙대로).
-- 메뉴: 일시정지 / 표시 지연 시간 / 투명도 / 배경색 / 글자색 / 로그인 시 시작 / About / 종료. 설정은 UserDefaults에 저장.
-- **알려진 한계**: 자동시작(SMAppService)은 번들 `.app`(가급적 /Applications)에서만 등록됨 — 언번들 dev 실행에선 실패 안내가 뜬다. 배포용 Developer ID 서명/공증은 미구현(ad-hoc은 로컬용). 편집 판정은 AX 역할+settable 휴리스틱. 투명도·유휴는 프리셋(슬라이더/직접입력은 후속).
+### 접근성 권한 (필수)
+캐럿을 읽으려면 접근성(TCC) 권한이 필요하다. 실행 후 **시스템 설정 → 개인정보 보호 및 보안 → 손쉬운 사용**에서 CarrotIME를 켠다.
+
+> **ad-hoc 서명 주의(재빌드 시).** 서명 인증서가 없어 `build-app.sh`는 ad-hoc 서명한다. 재빌드/재설치하면 서명(cdhash)이 바뀌어 **이전 권한 항목과 안 맞고, 켜도 신뢰되지 않는다**(`AXTrusted=false`). 이럴 땐 초기화 후 다시 켠다:
+> ```
+> tccutil reset Accessibility com.carrotime.mac
+> open /Applications/CarrotIME.app     # 다시 손쉬운 사용에서 켜기
+> ```
+> 재빌드마다 이 과정이 번거로우면 **자체 서명 인증서**로 서명하면 권한이 유지된다(후속 과제).
+
+- 메뉴바에 당근 아이콘 + 현재 상태 글자(가/A/あ). 텍스트 필드에 포커스하고 **설정한 유휴시간(기본 3초)** 가만히 두면 캐럿 옆에 인디케이터가 뜬다(타이핑 중엔 숨음 — 스펙대로).
+- 메뉴: 일시정지 / 표시 지연 시간(1·2·3·5초) / 투명도 / 배경색 / 글자색 / 로그인 시 시작 / About / 종료. 설정은 UserDefaults 저장.
+- **진단**: `CARROTIME_DEBUG=1` 이면 `/tmp/carrotime.log` 에 AX 신뢰·포커스·표시 결정을 남긴다. (설치본은 `launchctl setenv CARROTIME_DEBUG 1` 후 재실행하면 세션 env를 상속.)
+- **알려진 한계**: 배포용 Developer ID 서명/공증 미구현(ad-hoc은 로컬용). 편집 판정은 AX 역할+settable 휴리스틱. 투명도·유휴는 프리셋. Chromium 캐럿은 정밀 rect가 없어 필드 프레임 폴백.
 
 ## 초기 프로브 (참고)
 

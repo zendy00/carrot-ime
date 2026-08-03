@@ -22,15 +22,8 @@ final class StatusItemController: NSObject {
     override init() {
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
-        if let button = item.button {
-            // 당근 아이콘(SF Symbol, 템플릿 → 라이트/다크 자동). 옆에 상태 글자.
-            if let carrot = NSImage(systemSymbolName: "carrot", accessibilityDescription: "CarrotIME") {
-                carrot.isTemplate = true
-                button.image = carrot
-                button.imagePosition = .imageLeading
-            }
-            button.title = ""
-        }
+        item.button?.imagePosition = .imageOnly
+        item.button?.image = trayImage("A") // 초기 플레이스홀더(곧 update가 교체).
         item.menu = buildMenu()
         syncStates()
     }
@@ -38,12 +31,48 @@ final class StatusItemController: NSObject {
     func update(state: InputState, inputSourceId: String) {
         guard let button = item.button else { return }
         let letter = Decider.trayLabel(state, inputSourceId: inputSourceId)
-        if button.image != nil {
-            button.imagePosition = .imageLeading // 이미지+글자 둘 다 보이도록 매번 보장.
-            button.title = " \(letter)"
-        } else {
-            button.title = letter
+        button.imagePosition = .imageOnly
+        button.title = ""
+        button.image = trayImage(letter)
+    }
+
+    // 당근 위에 상태 글자를 겹쳐 그린 단일 메뉴바 이미지.
+    private func trayImage(_ letter: String) -> NSImage {
+        let size = NSSize(width: 22, height: 20)
+        let image = NSImage(size: size)
+        image.lockFocus()
+
+        // 당근(주황) 배경.
+        if let carrot = NSImage(systemSymbolName: "carrot", accessibilityDescription: "CarrotIME") {
+            let cfg = NSImage.SymbolConfiguration(pointSize: 19, weight: .regular)
+                .applying(NSImage.SymbolConfiguration(paletteColors: [.systemOrange]))
+            let c = carrot.withSymbolConfiguration(cfg) ?? carrot
+            let side: CGFloat = 19
+            c.draw(in: NSRect(x: (size.width - side) / 2, y: (size.height - side) / 2, width: side, height: side),
+                   from: .zero, operation: .sourceOver, fraction: 1)
         }
+
+        // 글자를 가운데 겹쳐(흰색 굵게 + 대비용 그림자).
+        let ps = NSMutableParagraphStyle()
+        ps.alignment = .center
+        let shadow = NSShadow()
+        shadow.shadowColor = NSColor.black.withAlphaComponent(0.85)
+        shadow.shadowBlurRadius = 1.5
+        shadow.shadowOffset = .zero
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 11, weight: .heavy),
+            .foregroundColor: NSColor.white,
+            .paragraphStyle: ps,
+            .shadow: shadow,
+        ]
+        let text = letter as NSString
+        let ts = text.size(withAttributes: attrs)
+        text.draw(in: NSRect(x: 0, y: (size.height - ts.height) / 2 - 0.5, width: size.width, height: ts.height),
+                  withAttributes: attrs)
+
+        image.unlockFocus()
+        image.isTemplate = false // 컬러 아이콘.
+        return image
     }
 
     // MARK: - 메뉴 구성
