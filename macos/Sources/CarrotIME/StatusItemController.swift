@@ -10,7 +10,7 @@ final class StatusItemController: NSObject {
     /// 설정이 바뀌면 호출 — 오케스트레이터가 오버레이를 즉시 다시 반영하도록.
     var onSettingsChanged: (() -> Void)?
 
-    private enum Tag { static let pause = 1 }
+    private enum Tag { static let pause = 1; static let autostart = 2 }
 
     private let idlePresets: [(String, Int)] = [
         ("항상 표시", 0), ("5초", 5_000), ("10초", 10_000),
@@ -58,6 +58,12 @@ final class StatusItemController: NSObject {
         }))
 
         menu.addItem(.separator())
+        let auto = NSMenuItem(title: "로그인 시 시작", action: #selector(toggleAutoStart), keyEquivalent: "")
+        auto.target = self
+        auto.tag = Tag.autostart
+        menu.addItem(auto)
+
+        menu.addItem(.separator())
         let about = menu.addItem(withTitle: "About CarrotIME", action: #selector(about), keyEquivalent: "")
         about.target = self
         menu.addItem(withTitle: "종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -98,6 +104,18 @@ final class StatusItemController: NSObject {
         settings.foregroundHex = (s.representedObject as? String) ?? settings.foregroundHex
         changed()
     }
+    @objc private func toggleAutoStart() {
+        let target = !AutoStart.isEnabled
+        if case .failure(let err) = AutoStart.setEnabled(target) {
+            let a = NSAlert()
+            a.messageText = "로그인 시 시작을 변경하지 못했습니다"
+            a.informativeText = "번들된 CarrotIME.app(가급적 /Applications)으로 실행해야 로그인 항목을 등록할 수 있습니다.\n(\(err.localizedDescription))"
+            a.addButton(withTitle: "확인")
+            a.runModal()
+        }
+        syncStates()
+    }
+
     @objc private func about() {
         let a = NSAlert()
         a.messageText = "CarrotIME (macOS)"
@@ -116,6 +134,7 @@ final class StatusItemController: NSObject {
         guard let menu = item.menu else { return }
         for it in menu.items {
             if it.tag == Tag.pause { it.state = settings.paused ? .on : .off }
+            if it.tag == Tag.autostart { it.state = AutoStart.isEnabled ? .on : .off }
             guard let sub = it.submenu else { continue }
             for sit in sub.items { sit.state = isSelected(sit) ? .on : .off }
         }
