@@ -1,4 +1,3 @@
-import CarrotIMECore
 import Foundation
 
 /// 사용자 설정 — UserDefaults 영속. (Windows판 settings.txt 대응.)
@@ -17,7 +16,7 @@ final class AppSettings {
     }
 
     var idleReappearMs: Int {
-        get { d.object(forKey: Key.idleMs) as? Int ?? Decider.defaultIdleReappearMs }
+        get { d.object(forKey: Key.idleMs) as? Int ?? 3_000 } // 기본 3초(메뉴 프리셋과 일치)
         set { d.set(newValue, forKey: Key.idleMs) }
     }
     var opacity: Double {

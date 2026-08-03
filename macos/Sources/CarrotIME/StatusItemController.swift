@@ -13,8 +13,7 @@ final class StatusItemController: NSObject {
     private enum Tag { static let pause = 1; static let autostart = 2 }
 
     private let idlePresets: [(String, Int)] = [
-        ("항상 표시", 0), ("5초", 5_000), ("10초", 10_000),
-        ("20초", 20_000), ("30초", 30_000), ("1분", 60_000), ("3분", 180_000),
+        ("1초", 1_000), ("2초", 2_000), ("3초", 3_000), ("5초", 5_000),
     ]
     private let opacityPresets: [(String, Double)] = [
         ("20%", 0.2), ("40%", 0.4), ("60%", 0.6), ("75%", 0.75), ("100%", 1.0),
