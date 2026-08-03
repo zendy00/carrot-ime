@@ -1,7 +1,29 @@
-# CarrotIME — macOS (스파이크 단계)
+# CarrotIME — macOS (스켈레톤 단계)
 
 Windows판 CarrotIME를 macOS로 확장하기 위한 `macos` 브랜치의 Swift/AppKit 작업 공간.
-지금은 **실현 가능성 검증용 프로브 2개**만 있다. 두 프로브 결과로 실제 앱의 입력·상태 모델을 확정한 뒤 앱 타겟을 붙인다.
+프로브 2개로 입력·캐럿 모델을 검증했고, 이제 실제 앱 스켈레톤이 있다.
+
+## 구조 (함수형 코어 / 명령형 셸 — Windows판과 동일 원칙)
+
+- `Sources/CarrotIMECore` — OS 접근 없는 순수 로직. 유일한 seam `Decider.decide(InputSnapshot) → IndicatorView`.
+  Windows `CarrotIME.Core`의 이식이며, 상태 판별만 macOS 입력 소스 모델(ID 기반)로 교체됐다.
+- `Sources/CarrotIME` — AppKit 셸. 어댑터(`InputSourceReader`=TIS 이벤트, `CaretReader`=AX),
+  `OverlayWindow`(투명·클릭통과 오버레이), `StatusItemController`(메뉴바), `IndicatorController`(오케스트레이터).
+- `Sources/{CaretProbe,ImeProbe}` — 초기 스파이크 프로브(검증 완료, 참고용).
+
+## 앱 실행
+
+```
+cd macos
+swift run CarrotIME
+```
+
+- 처음 실행 시 **접근성 권한(TCC)** 프롬프트. 손쉬운 사용에서 호스팅 터미널 앱을 허용 후 재실행.
+- 메뉴바에 현재 상태 글자(가/A/あ)가 뜨고, TextEdit·메모 등 텍스트 필드에 포커스하면 캐럿 옆에 파란 인디케이터가 붙는다.
+- **스켈레톤 한계**: 유휴 debounce는 데모용으로 꺼둠(항상 표시). 편집 판정은 휴리스틱(역할+settable),
+  색상·투명도·유휴시간·자동시작 설정 미구현. 배포용 `.app` 번들·서명 미구현(현재 언번들 dev 실행).
+
+## 초기 프로브 (참고)
 
 ## 요구
 
