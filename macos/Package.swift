@@ -16,5 +16,6 @@ let package = Package(
             path: "Sources/CarrotIME"),
         .executableTarget(name: "CaretProbe", path: "Sources/CaretProbe"),
         .executableTarget(name: "ImeProbe", path: "Sources/ImeProbe"),
+        .executableTarget(name: "BrowserCaretProbe", path: "Sources/BrowserCaretProbe"),
     ]
 )
