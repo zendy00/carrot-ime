@@ -1,20 +1,22 @@
 import AppKit
 import CarrotIMECore
 
-/// 캐럿 옆 라벨을 그리는 커스텀 뷰 — 파란 원형에 흰 글자.
+/// 캐럿 옆 라벨을 그리는 커스텀 뷰 — 둥근 배경에 글자. 색은 설정에서 온다.
 final class IndicatorLabelView: NSView {
     var label: String = "A" { didSet { needsDisplay = true } }
+    var bgColor: NSColor = .systemBlue { didSet { needsDisplay = true } }
+    var fgColor: NSColor = .white { didSet { needsDisplay = true } }
 
     override func draw(_ dirtyRect: NSRect) {
         let r = bounds.insetBy(dx: 1, dy: 1)
-        NSColor(calibratedRed: 0.20, green: 0.55, blue: 1.0, alpha: 0.92).setFill()
+        bgColor.setFill()
         NSBezierPath(roundedRect: r, xRadius: r.height / 2, yRadius: r.height / 2).fill()
 
         let ps = NSMutableParagraphStyle()
         ps.alignment = .center
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 13, weight: .semibold),
-            .foregroundColor: NSColor.white,
+            .foregroundColor: fgColor,
             .paragraphStyle: ps,
         ]
         let s = label as NSString
@@ -48,7 +50,11 @@ final class OverlayWindow {
             window.orderOut(nil)
             return
         }
+        let s = AppSettings.shared
         view.label = v.label
+        view.bgColor = IndicatorPalette.color(s.backgroundHex)
+        view.fgColor = IndicatorPalette.color(s.foregroundHex)
+        window.alphaValue = CGFloat(s.opacity)
         window.setFrameTopLeftPoint(Coord.topLeftToCocoa(v.position))
         window.orderFrontRegardless()
     }

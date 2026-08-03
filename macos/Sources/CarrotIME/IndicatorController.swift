@@ -14,9 +14,7 @@ final class IndicatorController {
     private var lastFocused: AXUIElement?
     private var lastActivity = Date()
 
-    // 입력 후 다시 표시되기까지의 유휴 시간. 스펙 기본 20초.
-    // (테스트로 빨리 보고 싶으면 이 값을 낮춘다. 설정 로딩은 후속 작업.)
-    private let idleReappearMs = Decider.defaultIdleReappearMs
+    private let settings = AppSettings.shared
 
     init(status: StatusItemController) {
         self.status = status
@@ -25,6 +23,8 @@ final class IndicatorController {
             self.status.update(state: Decider.resolveState(id), inputSourceId: id)
             self.tick()
         }
+        // 설정 변경 시 오버레이를 즉시 다시 반영(색·투명도·유휴·일시정지).
+        status.onSettingsChanged = { [weak self] in self?.tick() }
         status.update(state: Decider.resolveState(inputSource.currentId), inputSourceId: inputSource.currentId)
     }
 
@@ -35,6 +35,12 @@ final class IndicatorController {
     }
 
     private func tick() {
+        // 일시정지면 아무것도 표시하지 않는다.
+        if settings.paused {
+            overlay.apply(.hidden)
+            return
+        }
+
         guard let reading = CaretReader.read() else {
             overlay.apply(.hidden)
             lastFocused = nil
@@ -65,7 +71,7 @@ final class IndicatorController {
             inputSourceId: inputSource.currentId,
             millisSinceInputActivity: idleMs)
 
-        overlay.apply(Decider.decide(snap, idleReappearMs: idleReappearMs))
+        overlay.apply(Decider.decide(snap, idleReappearMs: settings.idleReappearMs))
     }
 
     // 같은 UI 요소를 가리키는지(포커스 변화 판정). AXUIElement는 CFEqual로 의미 비교된다.
