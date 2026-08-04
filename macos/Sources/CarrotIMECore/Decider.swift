@@ -19,6 +19,14 @@ public enum Decider {
     public static func resolveState(_ inputSourceId: String) -> InputState {
         let id = inputSourceId
         if id.contains("inputmethod.Korean") { return .hangul }
+        // 구름입력기(Gureum): ID가 org.youknowone.inputmethod.Gureum.* 이고 한글 모드는
+        // han2/han3final/안마태 등 여러 레이아웃으로 나뉜다. 한/영 토글은 이 소스 ↔ ABC로 스왑되므로
+        // Gureum 소스는 라틴 레이아웃(qwerty/dvorak/colemak/workman/roman)만 영문으로 보고 나머지는 한글.
+        if id.contains("inputmethod.Gureum") {
+            let latin = ["qwerty", "dvorak", "colemak", "workman", "roman"]
+            let tail = id.components(separatedBy: ".").last ?? ""
+            return latin.contains(tail) ? .english : .hangul
+        }
         if id.contains("Japanese") { return .otherIme }
         if id.contains(".SCIM") || id.contains(".TCIM") || id.lowercased().contains("chinese") { return .otherIme }
         // com.apple.keylayout.* 및 그 외 라틴 레이아웃 → 영문.

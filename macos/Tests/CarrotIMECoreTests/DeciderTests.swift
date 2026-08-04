@@ -29,6 +29,11 @@ private func near(_ a: CGFloat, _ b: CGFloat) -> Bool { abs(a - b) < 0.5 }
     #expect(Decider.resolveState("com.apple.inputmethod.Korean.2SetKorean") == .hangul)
     #expect(Decider.resolveState("com.apple.keylayout.ABC") == .english)
     #expect(Decider.resolveState("com.apple.inputmethod.Japanese") == .otherIme)
+    // 구름입력기: 한글 레이아웃은 한글, 라틴 레이아웃은 영문. 한/영 토글은 ABC로 스왑됨.
+    #expect(Decider.resolveState("org.youknowone.inputmethod.Gureum.han2") == .hangul)
+    #expect(Decider.resolveState("org.youknowone.inputmethod.Gureum.han3final") == .hangul)
+    #expect(Decider.resolveState("org.youknowone.inputmethod.Gureum.qwerty") == .english)
+    #expect(Decider.resolveState("org.youknowone.inputmethod.Gureum.roman") == .english)
 }
 
 @Test func labels() {
