@@ -13,6 +13,7 @@ final class AppSettings {
         static let bgHex = "bgColorHex"
         static let fgHex = "fgColorHex"
         static let paused = "paused"
+        static let hidePointer = "hideOnPointerMove"
     }
 
     var idleReappearMs: Int {
@@ -34,5 +35,10 @@ final class AppSettings {
     var paused: Bool {
         get { d.bool(forKey: Key.paused) }
         set { d.set(newValue, forKey: Key.paused) }
+    }
+    /// 마우스·트랙패드 움직임도 입력 활동으로 보고 인디케이터를 숨길지. 기본 켜짐.
+    var hideOnPointerMove: Bool {
+        get { d.object(forKey: Key.hidePointer) as? Bool ?? true }
+        set { d.set(newValue, forKey: Key.hidePointer) }
     }
 }

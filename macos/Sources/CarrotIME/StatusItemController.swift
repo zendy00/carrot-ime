@@ -10,7 +10,7 @@ final class StatusItemController: NSObject {
     /// 설정이 바뀌면 호출 — 오케스트레이터가 오버레이를 즉시 다시 반영하도록.
     var onSettingsChanged: (() -> Void)?
 
-    private enum Tag { static let pause = 1; static let autostart = 2 }
+    private enum Tag { static let pause = 1; static let autostart = 2; static let pointerHide = 3 }
 
     private let idlePresets: [(String, Int)] = [
         ("1초", 1_000), ("2초", 2_000), ("3초", 3_000), ("5초", 5_000),
@@ -87,6 +87,11 @@ final class StatusItemController: NSObject {
         pause.tag = Tag.pause
         menu.addItem(pause)
 
+        let pointerHide = NSMenuItem(title: "마우스 움직이면 숨김", action: #selector(togglePointerHide), keyEquivalent: "")
+        pointerHide.target = self
+        pointerHide.tag = Tag.pointerHide
+        menu.addItem(pointerHide)
+
         menu.addItem(submenu("표시 지연 시간", idlePresets.map {
             mkItem($0.0, #selector(pickIdle(_:)), NSNumber(value: $0.1))
         }))
@@ -153,6 +158,7 @@ final class StatusItemController: NSObject {
     // MARK: - 액션
 
     @objc private func togglePause() { settings.paused.toggle(); changed() }
+    @objc private func togglePointerHide() { settings.hideOnPointerMove.toggle(); changed() }
     @objc private func pickIdle(_ s: NSMenuItem) {
         settings.idleReappearMs = (s.representedObject as? NSNumber)?.intValue ?? settings.idleReappearMs
         changed()
@@ -199,6 +205,7 @@ final class StatusItemController: NSObject {
         guard let menu = item.menu else { return }
         for it in menu.items {
             if it.tag == Tag.pause { it.state = settings.paused ? .on : .off }
+            if it.tag == Tag.pointerHide { it.state = settings.hideOnPointerMove ? .on : .off }
             if it.tag == Tag.autostart { it.state = AutoStart.isEnabled ? .on : .off }
             guard let sub = it.submenu else { continue }
             for sit in sub.items { sit.state = isSelected(sit) ? .on : .off }

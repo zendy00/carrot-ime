@@ -9,6 +9,7 @@ final class IndicatorController {
     private let inputSource = InputSourceReader()
     private let status: StatusItemController
     private var timer: Timer?
+    private var pointerMonitor: Any?
 
     private var lastCaret: CGRect?
     private var lastFocused: AXUIElement?
@@ -33,6 +34,16 @@ final class IndicatorController {
         let t = Timer(timeInterval: 0.15, repeats: true) { [weak self] _ in self?.tick() }
         RunLoop.main.add(t, forMode: .common)
         timer = t
+
+        // 포인터(마우스·트랙패드) 이동·드래그·스크롤도 입력 활동으로 간주 → 유휴 카운트 리셋.
+        // 움직이는 동안엔 숨고, 멈춰서 유휴 시간이 지나면 다시 뜬다(캐럿 이동과 동일 취급).
+        // 전역 모니터라 다른 앱 위에서의 움직임도 잡는다(수동 관찰 — 이벤트를 가로채지 않음).
+        pointerMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged, .scrollWheel]
+        ) { [weak self] _ in
+            guard let self, self.settings.hideOnPointerMove else { return }
+            self.lastActivity = Date()
+        }
     }
 
     private func tick() {
