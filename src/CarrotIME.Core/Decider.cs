@@ -77,6 +77,24 @@ public static class Decider
         _ => "IME"
     };
 
+    /// <summary>
+    /// 인디케이터를 표시할 상황인지만 판정한다 — 캐럿 위치는 보지 않는다.
+    /// 셸이 <b>캐럿을 읽기 전에</b> 이걸 먼저 물어, 어차피 숨길 상황이면 비싼 캐럿 해석
+    /// (UIA는 포커스된 앱의 UI 스레드를 동기로 붙잡아 타이핑을 지연시킨다)을 건너뛴다.
+    /// <see cref="Decide"/>의 표시 여부와 항상 같은 답을 준다.
+    /// </summary>
+    public static bool ShouldShow(bool editableFocus, long millisSinceInputActivity, long idleReappearMs)
+        // Ticket 03: 편집 가능한 텍스트 포커스가 있을 때만 표시.
+        // 입력 중에는 방해하지 않도록 숨기고, 설정된 유휴 시간이 지나면 다시 표시.
+        => editableFocus && millisSinceInputActivity >= idleReappearMs;
+
+    /// <summary>
+    /// 입력 활동 기준 경과 시간. 마지막 키/마우스 입력과 창 전환 중 <b>더 최근</b> 쪽을 쓴다
+    /// (창을 바꾸면 그 시점부터 유휴를 다시 센다).
+    /// </summary>
+    public static long MillisSinceActivity(long millisSinceLastInput, long millisSinceForegroundChange)
+        => Math.Min(millisSinceLastInput, millisSinceForegroundChange);
+
     /// <summary>스냅샷 하나를 받아 인디케이터를 어떻게 그릴지 결정한다.</summary>
     /// <param name="idleReappearMs">입력 후 다시 표시되기까지의 유휴 시간(ms). 사용자 설정값.</param>
     public static IndicatorView Decide(InputSnapshot s, long idleReappearMs = DefaultIdleReappearMs)
@@ -84,12 +102,7 @@ public static class Decider
         var state = ResolveState(s.KeyboardLangId, s.ConversionMode);
         var label = Label(state, s.KeyboardLangId);
 
-        // Ticket 03: 편집 가능한 텍스트 포커스가 있을 때만 표시.
-        if (!s.EditableFocus)
-            return IndicatorView.Hidden;
-
-        // 입력 중(최근 캐럿 이동)에는 방해하지 않도록 숨기고, 설정된 유휴 시간이 지나면 다시 표시.
-        if (s.MillisSinceInputActivity < idleReappearMs)
+        if (!ShouldShow(s.EditableFocus, s.MillisSinceInputActivity, idleReappearMs))
             return IndicatorView.Hidden;
 
         // 캐럿을 얻으면 캐럿 오른쪽에(방금 친 글자를 안 가리게), 못 얻으면(크롬 등)

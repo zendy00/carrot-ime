@@ -232,4 +232,51 @@ public class DeciderTests
         var snap = Snap(new Rectangle(100, 200, 2, 16), Ko, Native, millisSinceActivity: 0);
         Assert.True(Decider.Decide(snap, idleReappearMs: 0).Visible);
     }
+
+    // ---- ShouldShow: 캐럿을 읽기 전에 표시 여부를 먼저 묻는 게이트 ----
+    // 캐럿 해석(UIA)은 포커스된 앱의 UI 스레드를 동기로 붙잡는 비싼 호출이라,
+    // 셸이 "어차피 안 보일 상황"을 미리 걸러 건너뛸 수 있어야 한다.
+
+    [Fact]
+    public void ShouldShow_is_false_without_editable_focus()
+        => Assert.False(Decider.ShouldShow(editableFocus: false, millisSinceInputActivity: 60_000, idleReappearMs: 20_000));
+
+    [Fact]
+    public void ShouldShow_is_false_while_input_is_recent()
+        => Assert.False(Decider.ShouldShow(editableFocus: true, millisSinceInputActivity: 10_000, idleReappearMs: 20_000));
+
+    [Fact]
+    public void ShouldShow_is_true_once_idle_threshold_is_reached()
+        => Assert.True(Decider.ShouldShow(editableFocus: true, millisSinceInputActivity: 20_000, idleReappearMs: 20_000));
+
+    [Fact]
+    public void ShouldShow_with_zero_threshold_is_true_even_while_typing()
+        => Assert.True(Decider.ShouldShow(editableFocus: true, millisSinceInputActivity: 0, idleReappearMs: 0));
+
+    // Decide의 표시 여부는 ShouldShow와 반드시 일치해야 한다 — 셸이 ShouldShow로
+    // 캐럿 해석을 건너뛰는 이상, 둘이 어긋나면 인디케이터가 위치 없이 뜨거나 안 뜬다.
+    [Theory]
+    [InlineData(true, 0L)]
+    [InlineData(true, 10_000L)]
+    [InlineData(true, 20_000L)]
+    [InlineData(true, 60_000L)]
+    [InlineData(false, 60_000L)]
+    public void Decide_visibility_matches_ShouldShow(bool editable, long millisSinceActivity)
+    {
+        var snap = Snap(new Rectangle(100, 200, 2, 16), Ko, Native, editable, millisSinceActivity: millisSinceActivity);
+        Assert.Equal(
+            Decider.ShouldShow(editable, millisSinceActivity, Decider.DefaultIdleReappearMs),
+            Decider.Decide(snap).Visible);
+    }
+
+    // ---- 입력 활동 합성: 마지막 키/마우스 입력과 창 전환 중 더 최근 것이 기준 ----
+
+    [Fact]
+    public void Activity_takes_the_more_recent_of_input_and_foreground_change()
+    {
+        // 창을 바꾼 지 2초, 마지막 입력은 30초 전 → 2초로 본다(창 전환이 더 최근).
+        Assert.Equal(2_000, Decider.MillisSinceActivity(millisSinceLastInput: 30_000, millisSinceForegroundChange: 2_000));
+        // 반대로 입력이 더 최근이면 입력 기준.
+        Assert.Equal(500, Decider.MillisSinceActivity(millisSinceLastInput: 500, millisSinceForegroundChange: 45_000));
+    }
 }

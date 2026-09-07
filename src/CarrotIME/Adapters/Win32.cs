@@ -55,6 +55,21 @@ internal static class Win32
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
 
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct LASTINPUTINFO
+    {
+        public uint cbSize;
+        public uint dwTime; // 마지막 입력 시각(32비트 GetTickCount 기준)
+    }
+
+    /// <summary>
+    /// 시스템 전체의 마지막 키/마우스 입력 시각. 순수 로컬 호출이라 비용이 사실상 0이다
+    /// (캐럿 이동으로 입력을 감지하던 방식은 매 틱 크로스 프로세스 UIA를 물어야 했다).
+    /// </summary>
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
+
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);

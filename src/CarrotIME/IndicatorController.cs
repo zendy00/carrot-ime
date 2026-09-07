@@ -58,10 +58,19 @@ internal sealed class IndicatorController : IDisposable
     /// <summary>현재 입력 상태 글자(한/영/あ 등)를 알린다. 트레이 아이콘 갱신용.</summary>
     public Action<string>? StateChanged { get; set; }
 
-    // 입력 활동(캐럿 이동) 추적 — debounce 표시용.
-    private Rectangle? _lastCaret;
-    private long? _lastActivityTick; // null = 활동 기록 없음(유휴로 간주). TickCount64==0 충돌 방지.
-    private IntPtr _lastForeground;   // 포그라운드 창 전환 감지용(전역 포커스 이벤트 잡음 무시)
+    private IntPtr _lastForeground;              // 포그라운드 창 전환 감지용(전역 포커스 이벤트 잡음 무시)
+    private long _lastForegroundChangeTick = Environment.TickCount64;
+
+    // 편집 포커스 판정 캐시. 편집 가능 여부는 포커스된 요소의 성질이지 매 틱의 사실이 아니다 —
+    // 그런데 판정에는 UIA(크로스 프로세스)가 필요해 매 틱 물으면 대상 앱 UI 스레드를 갉아먹는다.
+    // 그래서 포커스가 바뀔 때만 다시 묻는다(WinEvent 포커스 이벤트 + hwndFocus 변경으로 무효화).
+    private bool? _editableFocus;
+    private IntPtr _editableFocusKey;
+
+    // 표시 중에 쓰는 캐럿 위치와, 그걸 해석한 시점의 마지막 입력 도장.
+    // 도장이 그대로면 입력이 없었다는 뜻이고, 캐럿은 입력으로만 움직이므로 다시 읽지 않는다.
+    private Rectangle? _shownCaret;
+    private uint? _shownCaretInputTick;
 
     public IndicatorController()
     {
@@ -87,6 +96,13 @@ internal sealed class IndicatorController : IDisposable
     {
         // 전역 이벤트라 배경 앱 것도 들어온다 → 여기선 재평가만 하고, 유휴 리셋 여부는
         // ReadSnapshot에서 '실제 포그라운드 창이 바뀌었는지'로 판단한다.
+        //
+        // 편집 포커스 캐시는 포그라운드 스레드의 이벤트일 때만 버린다. Chromium 계열은
+        // DOM 포커스가 바뀌어도 hwndFocus가 그대로라 이 이벤트가 유일한 무효화 신호지만,
+        // 배경 앱 이벤트로까지 버리면 캐시가 의미를 잃는다.
+        if (thread == Win32.GetWindowThreadProcessId(Win32.GetForegroundWindow(), out _))
+            _editableFocus = null;
+
         Update();
     }
 
@@ -137,8 +153,8 @@ internal sealed class IndicatorController : IDisposable
         IntPtr foreground = Win32.GetForegroundWindow();
         if (foreground == IntPtr.Zero)
         {
-            _lastCaret = null;
             _lastForeground = IntPtr.Zero;
+            _editableFocus = null;
             return new InputSnapshot(
                 EditableFocus: false,
                 Caret: null,
@@ -152,18 +168,40 @@ internal sealed class IndicatorController : IDisposable
 
         // 실제 포그라운드 창이 바뀐 경우에만 유휴 카운트를 리셋한다(배경 앱의 전역 포커스
         // 이벤트로는 리셋하지 않음 — 그게 20초 유휴를 계속 깨서 인디케이터가 안 뜨던 원인).
-        bool foregroundChanged = foreground != _lastForeground;
-        _lastForeground = foreground;
+        if (foreground != _lastForeground)
+        {
+            _lastForeground = foreground;
+            _lastForegroundChangeTick = Environment.TickCount64;
+            _editableFocus = null;
+        }
 
         uint threadId = Win32.GetWindowThreadProcessId(foreground, out _);
         var (langId, conversionMode) = ImeStateReader.Read(foreground, threadId);
-        var caretHit = Caret.Resolve(threadId);
-        Rectangle? caret = caretHit?.Rect;
 
-        // 편집 확정 소스의 캐럿이면 그대로 인정, 아니면 UIA로 텍스트 컨트롤 여부를 확인.
-        bool editable = caretHit?.ImpliesEditable == true || FocusInspector.IsTextControl();
+        // --- 여기까지가 매 틱 도는 값싼 구간(전부 로컬 호출) ---
+        bool editable = IsEditableFocus(threadId);
+        uint lastInputTick = InputActivity.LastInputTick();
+        long millisSinceActivity = Decider.MillisSinceActivity(
+            InputActivity.MillisSince(lastInputTick),
+            Environment.TickCount64 - _lastForegroundChangeTick);
 
-        long millisSinceActivity = TrackActivity(caret, foregroundChanged);
+        // --- 비싼 구간: 캐럿 해석(UIA/MSAA) ---
+        // 타이핑 중에는 어차피 숨김이라 위치가 필요 없고, 표시 중이라도 캐럿은 입력이 있을
+        // 때만 움직인다. 그래서 (a) 표시할 상황이고 (b) 지난 해석 이후 새 입력이 있었을 때만
+        // 다시 읽는다. 이 게이트가 없으면 매 틱 대상 앱(Chromium 계열이면 특히 비싸다)의
+        // UI 스레드를 동기로 붙잡아 입력이 씹힌다.
+        // ("항상 표시" 설정(0초)에서는 입력마다 도장이 바뀌므로 캐럿을 계속 따라간다.)
+        if (!Decider.ShouldShow(editable, millisSinceActivity, _idleReappearMs))
+        {
+            _shownCaret = null;
+            _shownCaretInputTick = null;
+        }
+        else if (_shownCaretInputTick != lastInputTick)
+        {
+            _shownCaret = Caret.Resolve(threadId)?.Rect;
+            _shownCaretInputTick = lastInputTick;
+        }
+        Rectangle? caret = _shownCaret;
 
         Rectangle activeWindow = GetWindowBounds(foreground);
         // 캐럿이 있으면 그 지점, 없으면(폴백) 배지가 놓일 활성 창 우상단이 속한 화면 기준.
@@ -182,31 +220,38 @@ internal sealed class IndicatorController : IDisposable
             MillisSinceInputActivity: millisSinceActivity);
     }
 
-    // 캐럿 이동을 입력 활동으로 보고, 마지막 활동 이후 경과 ms를 돌려준다.
-    // 창 전환 시점을 활동 기준으로 삼는다 → 창을 바꾸면 그때부터, 약 20초 유휴해야 표시.
-    // 주의: 캐럿을 못 얻는 앱(크롬 폴백)에선 이동을 감지할 수 없어, 유휴 임계 후 표시되면
-    //       입력을 시작해도 숨겨지지 않는다 — 활동을 알 방법이 없으므로 의도된 한계.
-    private long TrackActivity(Rectangle? caret, bool foregroundChanged)
+    // 편집 포커스 여부. 판정 자체는 예전과 같지만(편집 확정 캐럿이면 인정, 아니면 UIA로 확인)
+    // 매 틱이 아니라 포커스가 바뀔 때만 다시 묻고 그 사이엔 캐시를 쓴다.
+    // 네이티브 캐럿(GetGUIThreadInfo)은 로컬 호출이라 공짜이므로 캐시 없이 매 틱 확인해,
+    // 같은 hwndFocus 안에서 캐럿이 생겼다 없어지는 변화는 즉시 반영된다.
+    private bool IsEditableFocus(uint threadId)
     {
-        long now = Environment.TickCount64;
+        if (GuiThreadInfoCaret.TryGet(threadId) is not null)
+            return true;
 
-        if (foregroundChanged)
+        IntPtr focusHwnd = Win32.TryGetGuiThreadInfo(threadId, out var gti) ? gti.hwndFocus : IntPtr.Zero;
+        if (_editableFocus is bool cached && focusHwnd == _editableFocusKey)
+            return cached;
+
+        // 캐시 미스 — 여기서만 UIA/MSAA를 문다.
+        var caretHit = Caret.Resolve(threadId);
+        bool editable = caretHit?.ImpliesEditable == true || FocusInspector.IsTextControl();
+
+        // 긍정만 캐시한다. 부정까지 캐시하면 갇힌다 — 편집 포커스가 아니면 폴링 타이머가
+        // 멈추고, 그 뒤엔 캐시를 깰 WinEvent(포그라운드 스레드의 포커스 변경)가 오지 않는 한
+        // 다시 평가되지 않는다. 같은 입력창에 계속 타이핑하는 동안엔 그 이벤트가 안 오므로
+        // 인디케이터가 영영 안 뜬다. 부정일 때의 회복 경로는 예전과 같이 매번 재평가로 둔다.
+        if (editable)
         {
-            _lastCaret = caret;          // 기준선만 갱신
-            _lastActivityTick = now;     // 창 전환 시점부터 유휴 카운트 시작(약 20초 지나야 표시)
+            _editableFocusKey = focusHwnd;
+            _editableFocus = true;
         }
-        else if (caret is Rectangle c && _lastCaret is Rectangle last)
+        else
         {
-            if (c != last)
-                _lastActivityTick = now; // 캐럿이 움직임 = 입력 중
-            _lastCaret = caret;
-        }
-        else if (caret is not null)
-        {
-            _lastCaret = caret; // 이전에 캐럿이 없던 상태에서 기준선 확립
+            _editableFocus = null;
         }
 
-        return _lastActivityTick is long tick ? now - tick : long.MaxValue;
+        return editable;
     }
 
     private static Rectangle GetWindowBounds(IntPtr hwnd)
