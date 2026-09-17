@@ -1,6 +1,6 @@
 # CarrotIME — macOS
 
-Windows판 CarrotIME를 macOS로 확장한 `macos` 브랜치의 Swift/AppKit 네이티브 앱.
+Windows판 CarrotIME를 macOS로 확장한 Swift/AppKit 네이티브 앱(`macos/` 디렉터리).
 캐럿 옆에 현재 입력기 상태(한 / A / あ / 中)를 띄우는 메뉴바 상주 앱이다. **Xcode 없이 SwiftPM만으로** 빌드된다.
 
 ## 상태

@@ -52,7 +52,8 @@ jobs:
           # --generate-notes는 직접 push된 커밋을 본문에 싣지 않으므로(PR 기반),
           # 이전 태그 이후 커밋 제목을 노트 앞부분에 직접 넣는다.
           prev=$(git describe --tags --abbrev=0 2>/dev/null || true)
-          notes=$(git log --pretty='- %s' ${prev:+$prev..HEAD})
+          # macos/ 커밋은 이 exe와 무관하므로 Windows 경로(src·tests)를 건드린 커밋만 싣는다.
+          notes=$(git log --pretty='- %s' ${prev:+$prev..HEAD} -- src tests)
           gh release create "v$version" src/CarrotIME/bin/publish/CarrotIME.exe \
             --title "CarrotIME v$version" \
             --notes "$notes" \

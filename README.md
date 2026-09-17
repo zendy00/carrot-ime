@@ -35,7 +35,7 @@ dotnet publish src/CarrotIME/CarrotIME.csproj -p:PublishProfile=win-x64
 
 ## macOS 버전
 
-`macos` 브랜치에 **Swift/AppKit 네이티브** macOS 앱이 있습니다(`macos/` 디렉터리). 윈도우판과 같은 설계(함수형 코어 / 명령형 셸)를 따르되, OS 접근부는 전부 macOS API로 재작성했습니다.
+`macos/` 디렉터리에 **Swift/AppKit 네이티브** macOS 앱이 있습니다. 윈도우판과 같은 설계(함수형 코어 / 명령형 셸)를 따르되, OS 접근부는 전부 macOS API로 재작성했습니다.
 
 - 캐럿 옆에 현재 입력 상태 표시 (한 / A / あ / 中), 편집 필드에서만.
 - 입력 중엔 숨기고 유휴하면 표시 (1·2·3·5초 프리셋).

@@ -4,8 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 프로젝트
 
-CarrotIME — 텍스트 캐럿 옆에 현재 입력기 상태(한 / A / あ / 中)를 띄우는 Windows 트레이 앱.
-net9.0-windows, WinForms, x64 전용, 관리자 권한(UAC)으로 실행된다(ADR-0003).
+CarrotIME — 텍스트 캐럿 옆에 현재 입력기 상태(한 / A / あ / 中)를 띄우는 트레이/메뉴바 앱.
+한 브랜치(main)에 두 플랫폼이 공존한다:
+
+- **Windows** — `src/`, `tests/`. net9.0-windows, WinForms, x64 전용, 관리자 권한(UAC)으로 실행(ADR-0003). 아래 본문은 주로 Windows판 설명.
+- **macOS** — `macos/`. Swift/AppKit, SwiftPM만으로 빌드(Xcode 불필요). 빌드·설치·서명·접근성 권한은 `macos/README.md`.
+
+같은 기능을 양쪽에 반영할 때는 설계 원칙(순수 Core의 Decider seam, 어댑터는 사실 수집만)을 맞춰 각자 이식한다.
 
 ## 명령
 
@@ -19,7 +24,18 @@ dotnet publish src/CarrotIME -p:PublishProfile=win-x64          # 배포 빌드(
 - publish 결과: `src/CarrotIME/bin/publish/CarrotIME-1.0.0.N.exe` (self-contained 단일 exe, 압축, R2R off — 메모리 점유 때문. pubxml 주석 참고).
 - 빌드 번호 `N`은 `src/CarrotIME/build.counter`(gitignore)가 빌드마다 자동 증가. AssemblyVersion은 1.0.0.0 고정.
 - `src/**`가 main에 push되면 `.github/workflows/release.yml`이 테스트→publish→GitHub Release(v1.0.0.<run#>)를 자동 생성. 릴리즈 자산명은 `CarrotIME.exe`로 고정 — 자동 시작이 exe 절대경로를 등록하므로 바꾸면 안 된다.
-- 커밋 메시지는 한국어 Conventional Commits(feat/fix/docs/ci/perf).
+- 커밋 메시지는 한국어 Conventional Commits(feat/fix/docs/ci/perf). macOS 변경은 `feat(macos):`처럼 scope를 붙인다.
+
+macOS(`macos/`에서):
+
+```
+swift test                                                      # Core 테스트(Swift Testing)
+./build-app.sh                                                  # release 빌드 + .app 조립 + 로컬 인증서 서명
+```
+
+- 설치: `/Applications/CarrotIME.app`을 교체. 로컬 인증서(`tools/make-signing-cert.sh`, 1회)로 서명하면 재빌드해도 접근성 권한이 유지된다.
+- 진단: `open --env CARROTIME_DEBUG=1 /Applications/CarrotIME.app` → `/tmp/carrotime.log`.
+- CI 릴리즈는 `src/**` 변경만 트리거하므로 `macos/` 변경은 Windows 릴리즈를 만들지 않는다.
 
 ## 실기 검증 제약
 
