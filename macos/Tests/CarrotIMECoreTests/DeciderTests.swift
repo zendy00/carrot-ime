@@ -100,3 +100,43 @@ private func near(_ a: CGFloat, _ b: CGFloat) -> Bool { abs(a - b) < 0.5 }
     #expect(v.position.x + indicator.width <= screen.maxX)
     #expect(v.position.y + indicator.height <= screen.maxY)
 }
+
+// MARK: 표시 게이트 — AX를 묻기 전에 표시 여부를 먼저 판정
+// AX 질의는 대상 앱 메인 스레드를 동기로 붙잡는 비싼 호출이라, 셸이 "어차피 안 보일 상황"을
+// 미리 걸러 건너뛸 수 있어야 한다.
+
+@Test func shouldShowIsFalseWithoutEditableFocus() {
+    #expect(!Decider.shouldShow(editableFocus: false, millisSinceInputActivity: 60_000, idleReappearMs: 3_000))
+}
+
+@Test func shouldShowIsFalseWhileInputIsRecent() {
+    #expect(!Decider.isIdle(millisSinceInputActivity: 1_000, idleReappearMs: 3_000))
+    #expect(!Decider.shouldShow(editableFocus: true, millisSinceInputActivity: 1_000, idleReappearMs: 3_000))
+}
+
+@Test func shouldShowIsTrueOnceIdleThresholdIsReached() {
+    #expect(Decider.isIdle(millisSinceInputActivity: 3_000, idleReappearMs: 3_000))
+    #expect(Decider.shouldShow(editableFocus: true, millisSinceInputActivity: 3_000, idleReappearMs: 3_000))
+}
+
+@Test func shouldShowWithZeroThresholdIsTrueEvenWhileTyping() {
+    #expect(Decider.shouldShow(editableFocus: true, millisSinceInputActivity: 0, idleReappearMs: 0))
+}
+
+// decide의 표시 여부는 shouldShow와 반드시 일치해야 한다 — 셸이 게이트로 AX를 건너뛰는 이상,
+// 둘이 어긋나면 인디케이터가 위치 없이 뜨거나 안 뜬다.
+@Test(arguments: [(true, 0), (true, 1_000), (true, 3_000), (true, 60_000), (false, 60_000)])
+func decideVisibilityMatchesShouldShow(editable: Bool, elapsed: Int) {
+    let caret = CGRect(x: 100, y: 200, width: 2, height: 16)
+    let v = Decider.decide(snap(caret: caret, frame: nil, editable: editable, idleElapsed: elapsed), idleReappearMs: 3_000)
+    #expect(v.visible == Decider.shouldShow(editableFocus: editable, millisSinceInputActivity: elapsed, idleReappearMs: 3_000))
+}
+
+// MARK: 입력 활동 합성 — 마지막 키/마우스 입력과 포커스 변화 중 더 최근 것이 기준
+
+@Test func activityTakesTheMoreRecentOfInputAndFocusChange() {
+    // 포커스가 바뀐 지 2초, 마지막 입력은 30초 전 → 2초(포커스 변화가 더 최근).
+    #expect(Decider.millisSinceActivity(millisSinceLastInput: 30_000, millisSinceFocusChange: 2_000) == 2_000)
+    // 입력이 더 최근이면 입력 기준.
+    #expect(Decider.millisSinceActivity(millisSinceLastInput: 500, millisSinceFocusChange: 60_000) == 500)
+}

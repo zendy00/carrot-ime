@@ -9,22 +9,32 @@ struct CaretReading {
     var fieldFrame: CGRect?     // top-left 전역 좌표(포커스 요소 프레임, 캐럿 폴백 앵커)
     var windowBounds: CGRect    // top-left 전역 좌표
     var role: String
-    var focusedElement: AXUIElement?  // 포커스 변화 감지용(유휴 카운트 리셋).
+    var focusedElement: AXUIElement   // 이 판독의 대상(판독 캐시 키).
 }
 
 enum CaretReader {
     // AXManualAccessibility를 켠 앱 pid(중복 세팅 방지). Chromium/Electron은 이걸 켜야 AX 트리가 산다.
     private static var axEnabledPids: Set<pid_t> = []
 
-    static func read() -> CaretReading? {
-        guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
+    /// 최상단 앱의 포커스 요소만 얻는다(AX 질의 1회). 포커스 변화 감지용 — 전체 판독보다 훨씬 싸다.
+    static func focusedElement(of app: NSRunningApplication) -> AXUIElement? {
         let axApp = AXUIElementCreateApplication(app.processIdentifier)
         enableChromiumAXIfNeeded(app.processIdentifier, axApp)
         guard let focused = copyAttr(axApp, kAXFocusedUIElementAttribute) else { return nil }
-        let elem = focused as! AXUIElement
+        return (focused as! AXUIElement)
+    }
+
+    /// 포커스 요소의 편집 여부·캐럿·프레임·창 경계를 판독한다.
+    /// 편집 요소가 아니면 어차피 표시하지 않으므로 캐럿·프레임·창 질의는 생략한다.
+    static func read(_ elem: AXUIElement, of app: NSRunningApplication) -> CaretReading {
         let role = (copyAttr(elem, kAXRoleAttribute) as? String) ?? ""
+        guard FocusInspector.isEditable(elem, role: role) else {
+            return CaretReading(editableFocus: false, caret: nil, fieldFrame: nil, windowBounds: .zero,
+                                role: role, focusedElement: elem)
+        }
+        let axApp = AXUIElementCreateApplication(app.processIdentifier)
         return CaretReading(
-            editableFocus: FocusInspector.isEditable(elem, role: role),
+            editableFocus: true,
             caret: caretRect(elem),
             fieldFrame: frameRect(elem),
             windowBounds: focusedWindowBounds(axApp) ?? .zero,

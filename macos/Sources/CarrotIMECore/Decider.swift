@@ -57,16 +57,35 @@ public enum Decider {
         return "IME"
     }
 
+    /// 입력 활동 후 유휴 시간이 충분히 지났는가. 포커스·캐럿은 보지 않는다.
+    /// 셸이 **AX를 묻기 전에** 이걸 먼저 확인해, 입력 중(어차피 숨김)이면 대상 앱에 대한
+    /// AX 질의(대상 앱 메인 스레드를 동기로 붙잡아 타이핑을 지연시킨다)를 통째로 건너뛴다.
+    public static func isIdle(millisSinceInputActivity: Int, idleReappearMs: Int) -> Bool {
+        millisSinceInputActivity >= idleReappearMs
+    }
+
+    /// 인디케이터를 표시할 상황인지만 판정한다 — 캐럿 위치는 보지 않는다.
+    /// `decide`의 표시 여부와 항상 같은 답을 준다.
+    public static func shouldShow(editableFocus: Bool, millisSinceInputActivity: Int, idleReappearMs: Int) -> Bool {
+        // 편집 가능한 텍스트 포커스가 있을 때만 표시.
+        // 입력 중에는 방해하지 않도록 숨기고, 설정된 유휴 시간이 지나면 다시 표시.
+        editableFocus && isIdle(millisSinceInputActivity: millisSinceInputActivity, idleReappearMs: idleReappearMs)
+    }
+
+    /// 입력 활동 기준 경과 시간. 마지막 키/마우스 입력과 포커스 변화(앱·요소) 중 **더 최근** 쪽을 쓴다
+    /// (포커스가 바뀌면 그 시점부터 유휴를 다시 센다).
+    public static func millisSinceActivity(millisSinceLastInput: Int, millisSinceFocusChange: Int) -> Int {
+        min(millisSinceLastInput, millisSinceFocusChange)
+    }
+
     /// 스냅샷 하나를 받아 인디케이터를 어떻게 그릴지 결정한다.
     public static func decide(_ s: InputSnapshot, idleReappearMs: Int = defaultIdleReappearMs) -> IndicatorView {
         let state = resolveState(s.inputSourceId)
         let text = label(state, inputSourceId: s.inputSourceId)
 
-        // 편집 가능한 텍스트 포커스가 있을 때만 표시.
-        guard s.editableFocus else { return .hidden }
-
-        // 입력 중(최근 캐럿 이동)에는 숨기고, 설정된 유휴 시간이 지나면 다시 표시.
-        if s.millisSinceInputActivity < idleReappearMs { return .hidden }
+        guard shouldShow(editableFocus: s.editableFocus,
+                         millisSinceInputActivity: s.millisSinceInputActivity,
+                         idleReappearMs: idleReappearMs) else { return .hidden }
 
         // 앵커 3단 폴백:
         //  1) 정밀 캐럿(sane)이 있으면 그 오른쪽(넓은 선택 rect면 왼쪽 바깥).
