@@ -32,3 +32,24 @@ dotnet publish src/CarrotIME/CarrotIME.csproj -p:PublishProfile=win-x64
 ```
 
 → `src/CarrotIME/bin/publish/CarrotIME-1.0.0.N.exe` — self-contained 단일 실행 파일. .NET 런타임 미설치 PC에서도 실행되며, 실행 시 관리자 권한(UAC) 승인이 필요합니다.
+
+## macOS 버전
+
+`macos` 브랜치에 **Swift/AppKit 네이티브** macOS 앱이 있습니다(`macos/` 디렉터리). 윈도우판과 같은 설계(함수형 코어 / 명령형 셸)를 따르되, OS 접근부는 전부 macOS API로 재작성했습니다.
+
+- 캐럿 옆에 현재 입력 상태 표시 (한 / A / あ / 中), 편집 필드에서만.
+- 입력 중엔 숨기고 유휴하면 표시 (1·2·3·5초 프리셋).
+- 배경색·글자색(색 견본 메뉴)·투명도(20~100%)·일시정지·로그인 시 시작.
+- 메뉴바에 **당근 위에 상태 글자를 겹친 아이콘**.
+- 브라우저 캐럿: Safari는 정밀 캐럿, Chrome/Electron은 접근성 활성화 + 필드 프레임 폴백.
+
+상태 판별은 윈도우의 키보드 레이아웃+조합모드 폴링과 달리, **현재 입력 소스 ID** 하나로 갈리고 전환은 이벤트로 처리됩니다.
+
+```
+cd macos
+./build-app.sh && cp -R build/CarrotIME.app /Applications/
+open /Applications/CarrotIME.app
+# 시스템 설정 → 개인정보 보호 및 보안 → 손쉬운 사용에서 CarrotIME 허용
+```
+
+빌드·설치·접근성 권한·한계(배포용 서명 미구현, 입력 소스 전환 HUD 억제는 OS 제약으로 불가)는 [`macos/README.md`](macos/README.md) 참고.
